@@ -1,13 +1,11 @@
 import { config } from "../shared/config";
+import { fail, HttpError, pathSegments } from "./http";
+import { handlePublicRoute } from "./routes/public";
 
 const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
 const robotsFile = Bun.file("public/robots.txt");
-
-function isPublicPage(pathname: string): boolean {
-  return pathname === "/" || /^\/[a-z0-9-]+$/.test(pathname);
-}
 
 const server = Bun.serve({
   port: config.port,
@@ -18,8 +16,17 @@ const server = Bun.serve({
     if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"));
     if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8" } });
     if (url.pathname === "/robots.txt") return new Response(robotsFile, { headers: { "content-type": "text/plain; charset=utf-8" } });
-    if (isPublicPage(url.pathname)) return new Response(htmlFile, { headers: { "content-type": "text/html; charset=utf-8" } });
-    return new Response("Tidak ditemukan.", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    if (url.pathname.startsWith("/api/")) {
+      try {
+        return await handlePublicRoute(request, url, pathSegments(url.pathname));
+      } catch (error) {
+        if (error instanceof HttpError) return fail(error.status, error.code, error.message, error.details);
+        console.error("Kesalahan API", error);
+        return fail(500, "INTERNAL_ERROR", "Terjadi kesalahan pada server.");
+      }
+    }
+    if (url.pathname.startsWith("/media/")) return new Response("Media tidak ditemukan.", { status: 404 });
+    return new Response(htmlFile, { headers: { "content-type": "text/html; charset=utf-8" } });
   },
 });
 

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { ui } from "../shared/i18n";
+import { RESERVED_SHOP_SLUGS } from "../shared/validation";
+import { HomePage } from "./pages/HomePage";
+import { ShopPage } from "./pages/ShopPage";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +15,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </a>
           <nav className="header-actions" aria-label="Navigasi utama">
             <a className="button button-text" href="/seller/login" data-nav="true">{ui.login}</a>
+            <a className="button button-secondary" href="/seller/register" data-nav="true">{ui.register}</a>
           </nav>
         </div>
       </header>
@@ -42,6 +46,11 @@ function NotFound() {
   return <div className="empty-state"><h1>Halaman tidak ditemukan</h1><a href="/" data-nav="true">Kembali ke beranda</a></div>;
 }
 
+function isShopPath(path: string): boolean {
+  const slug = path.slice(1);
+  return Boolean(slug) && !slug.includes("/") && !RESERVED_SHOP_SLUGS.has(slug.toLowerCase());
+}
+
 export function App() {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -66,8 +75,9 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.title = path === "/" ? `${ui.appName} | ${ui.appTagline}` : `${ui.appName} | ${path}`;
+    document.title = `${ui.appName} | ${ui.appTagline}`;
   }, [path]);
 
-  return <AppShell>{path === "/" ? <HomePlaceholder /> : <NotFound />}</AppShell>;
+  const content = path === "/" ? <HomePage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
+  return <AppShell>{content}</AppShell>;
 }

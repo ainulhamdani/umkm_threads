@@ -44,10 +44,13 @@ export type ShopSummary = {
   id: number;
   name: string;
   slug: string;
-  phone: string;
   profileImageUrl: string | null;
   address: ShopAddress;
-  previews: ProductSummary[];
+};
+
+export type ShopSearchItem = {
+  shop: ShopSummary;
+  matchingProducts: ProductSummary[];
 };
 
 export type ShopSearchParams = {
@@ -61,13 +64,14 @@ export type ShopSearchParams = {
 };
 
 export type ShopSearchResponse = {
-  filters: ShopSearchParams;
+  appliedFilters: ShopSearchParams;
   resultCount: number;
   nextCursor: string | null;
-  shops: ShopSummary[];
+  items: ShopSearchItem[];
 };
 
 export type PublicShop = ShopSummary & {
+  phone: string;
   description: string | null;
   products: ProductSummary[];
 };
