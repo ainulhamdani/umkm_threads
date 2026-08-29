@@ -23,11 +23,11 @@ const navigationItems: Array<{ section: SellerSection; label: string; href: stri
   { section: "pin", label: "Keamanan", href: "/seller/pin", icon: "⚙" },
 ];
 
-function SellerNavigation({ activeSection }: { activeSection?: SellerSection }) {
+function SellerNavigation({ activeSection, onNavigate }: { activeSection?: SellerSection; onNavigate?: () => void }) {
   return (
-    <nav className="flex gap-2 overflow-x-auto lg:grid lg:overflow-visible" aria-label="Menu penjual">
+    <nav className="grid gap-2" aria-label="Menu penjual">
       {navigationItems.map((item) => (
-        <a className={`group flex min-h-12 flex-none items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold no-underline transition-colors lg:w-full ${activeSection === item.section ? "bg-brand-600 text-white shadow-sm" : "text-[#49454f] hover:bg-brand-100"}`} href={item.href} data-nav="true" aria-current={activeSection === item.section ? "page" : undefined} key={item.section}>
+        <a className={`group flex min-h-12 w-full items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold no-underline transition-colors ${activeSection === item.section ? "bg-brand-600 text-white shadow-sm" : "text-[#49454f] hover:bg-brand-100"}`} href={item.href} data-nav="true" aria-current={activeSection === item.section ? "page" : undefined} key={item.section} onClick={onNavigate}>
           <span className={`grid size-9 place-items-center rounded-xl text-base ${activeSection === item.section ? "bg-white/20" : "bg-brand-100 text-brand-900"}`} aria-hidden="true">{item.icon}</span>
           <span>{item.label}</span>
         </a>
@@ -37,10 +37,59 @@ function SellerNavigation({ activeSection }: { activeSection?: SellerSection }) 
 }
 
 function SellerPageLayout({ title, description, activeSection, showNavigation = true, onLogout, children }: { title: string; description: string; activeSection?: SellerSection; showNavigation?: boolean; onLogout: () => void; children: React.ReactNode }) {
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const activeNavigationItem = navigationItems.find((item) => item.section === activeSection);
+
+  useEffect(() => {
+    if (!mobileNavigationOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileNavigationOpen(false);
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileNavigationOpen]);
+
+  useEffect(() => {
+    setMobileNavigationOpen(false);
+  }, [activeSection]);
+
   return (
     <>
       <div className={showNavigation ? "grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start" : "mx-auto max-w-3xl"}>
-        {showNavigation ? <aside className="rounded-3xl border border-brand-200 bg-white p-3 shadow-sm lg:sticky lg:top-24">
+        {showNavigation ? <>
+          <div className="flex items-center justify-between gap-3 rounded-3xl border border-brand-200 bg-white p-3 shadow-sm lg:hidden">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-600 font-extrabold text-white">TU</span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm font-extrabold text-brand-900">Threads UMKM</strong>
+                <span className="block truncate text-xs text-[#79747e]">{activeNavigationItem?.label ?? "Kelola toko"}</span>
+              </div>
+            </div>
+            <button className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-100 px-4 text-sm font-bold text-brand-900 transition-colors hover:bg-brand-200" type="button" aria-expanded={mobileNavigationOpen} aria-controls="seller-mobile-navigation" onClick={() => setMobileNavigationOpen((open) => !open)}>
+              <span aria-hidden="true">{mobileNavigationOpen ? "×" : "☰"}</span>
+              {mobileNavigationOpen ? "Tutup" : "Menu"}
+            </button>
+          </div>
+          {mobileNavigationOpen ? <>
+            <button className="fixed inset-0 z-20 bg-[#1d1b20]/40 lg:hidden" type="button" aria-label="Tutup menu penjual" onClick={() => setMobileNavigationOpen(false)} />
+            <aside id="seller-mobile-navigation" className="fixed inset-y-0 left-0 z-30 flex w-[min(86vw,320px)] flex-col gap-5 overflow-y-auto bg-white p-4 shadow-2xl lg:hidden" role="dialog" aria-modal="true" aria-label="Menu penjual">
+              <div className="flex items-center justify-between gap-3 border-b border-brand-100 pb-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-600 font-extrabold text-white">TU</span>
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm font-extrabold text-brand-900">Threads UMKM</strong>
+                    <span className="block text-xs text-[#79747e]">Ruang penjual</span>
+                  </div>
+                </div>
+                <button className="inline-flex size-12 shrink-0 items-center justify-center rounded-full text-2xl text-brand-900 transition-colors hover:bg-brand-100" type="button" aria-label="Tutup menu penjual" onClick={() => setMobileNavigationOpen(false)}>×</button>
+              </div>
+              <div>
+                <p className="mb-2 px-3 text-xs font-extrabold uppercase tracking-[0.08em] text-[#79747e]">Kelola toko</p>
+                <SellerNavigation activeSection={activeSection} onNavigate={() => setMobileNavigationOpen(false)} />
+              </div>
+            </aside>
+          </> : null}
+          <aside className="hidden rounded-3xl border border-brand-200 bg-white p-3 shadow-sm lg:sticky lg:top-24 lg:block">
           <div className="mb-4 flex items-center gap-3 border-b border-brand-100 px-3 py-2">
             <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-600 font-extrabold text-white">TU</span>
             <div>
@@ -50,7 +99,8 @@ function SellerPageLayout({ title, description, activeSection, showNavigation = 
           </div>
           <p className="mb-2 px-3 text-xs font-extrabold uppercase tracking-[0.08em] text-[#79747e]">Kelola toko</p>
           <SellerNavigation activeSection={activeSection} />
-        </aside> : null}
+          </aside>
+        </> : null}
         <div className="min-w-0">
           <header className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-brand-200 pb-5">
             <div className="grid gap-2">

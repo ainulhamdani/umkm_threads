@@ -28,7 +28,9 @@ describe("tata letak aplikasi", () => {
     expect(sellerDashboard).toContain('lg:grid-cols-[240px_minmax(0,1fr)]');
     expect(sellerDashboard).toContain('aria-label="Menu penjual"');
     expect(sellerDashboard).toContain('lg:sticky');
-    expect(sellerDashboard).toContain('overflow-x-auto');
+    expect(sellerDashboard).toContain('aria-controls="seller-mobile-navigation"');
+    expect(sellerDashboard).toContain('fixed inset-y-0 left-0');
+    expect(sellerDashboard).toContain('lg:hidden');
     expect(sellerDashboard).toContain('section === "shop"');
     expect(sellerDashboard).toContain('section === "products"');
     expect(sellerDashboard).toContain('section === "phone"');
