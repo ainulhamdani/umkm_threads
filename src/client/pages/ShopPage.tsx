@@ -23,6 +23,16 @@ function readStoredCart(): StoredCart | null {
   }
 }
 
+function hydrateCart(stored: StoredCart, shop: PublicShop): { shopId: number; shopSlug: string; shopName: string; lines: CartLine[] } | null {
+  if (stored.shopId !== shop.id || stored.shopSlug.toLowerCase() !== shop.slug.toLowerCase()) return null;
+  const productById = new Map(shop.products.map((product) => [product.id, product]));
+  const lines = stored.lines.flatMap((line) => {
+    const product = productById.get(line.productId);
+    return product && product.available && Number.isInteger(line.quantity) && line.quantity > 0 ? [{ product, quantity: Math.min(99, line.quantity) }] : [];
+  });
+  return lines.length > 0 ? { shopId: shop.id, shopSlug: shop.slug, shopName: shop.name, lines } : null;
+}
+
 function locationText(shop: PublicShop): string {
   const address = shop.address;
   return [address.provinceName, address.cityRegencyName, address.districtName].filter(Boolean).join(" · ");
@@ -43,16 +53,20 @@ export function ShopPage({ slug }: { slug: string }) {
     setShop(null);
     setError(null);
     setCartReady(false);
-    getShop(slug).then((loadedShop) => {
+    getShop(slug).then(async (loadedShop) => {
       setShop(loadedShop);
       const stored = readStoredCart();
-      if (stored?.shopId === loadedShop.id && stored.shopSlug.toLowerCase() === loadedShop.slug.toLowerCase()) {
-        const productById = new Map(loadedShop.products.map((product) => [product.id, product]));
-        const lines = stored.lines.flatMap((line) => {
-          const product = productById.get(line.productId);
-          return product && product.available && Number.isInteger(line.quantity) && line.quantity > 0 ? [{ product, quantity: Math.min(99, line.quantity) }] : [];
-        });
-        setCart({ shopId: loadedShop.id, shopSlug: loadedShop.slug, shopName: loadedShop.name, lines });
+      const sameShop = stored?.shopId === loadedShop.id && stored.shopSlug.toLowerCase() === loadedShop.slug.toLowerCase();
+      if (sameShop && stored) {
+        setCart(hydrateCart(stored, loadedShop));
+      } else if (stored) {
+        try {
+          const previousShop = await getShop(stored.shopSlug);
+          setCart(hydrateCart(stored, previousShop));
+        } catch (reason: unknown) {
+          console.warn("Keranjang dari toko sebelumnya tidak dapat dipulihkan.", reason);
+          setCart(null);
+        }
       } else {
         setCart(null);
       }
@@ -128,7 +142,7 @@ export function ShopPage({ slug }: { slug: string }) {
         <div className="section-heading"><h2 id="product-list-heading">{ui.products}</h2></div>
         {shop.products.length === 0 ? <div className="empty-state">{ui.noProducts}</div> : <div className="product-grid">{shop.products.map((product) => <ProductCard key={product.id} product={product} quantity={quantityByProduct.get(product.id) ?? 0} onChange={(quantity) => changeQuantity(product, quantity)} />)}</div>}
       </section>
-      {cartOpen && cart ? <CartDrawer slug={shop.slug} shopName={shop.name} lines={cart.lines} onClose={() => setCartOpen(false)} onRemove={removeProduct} /> : null}
+      {cartOpen && cart ? <CartDrawer slug={cart.shopSlug} shopName={cart.shopName} lines={cart.lines} onClose={() => setCartOpen(false)} onRemove={removeProduct} /> : null}
     </>
   );
 }
