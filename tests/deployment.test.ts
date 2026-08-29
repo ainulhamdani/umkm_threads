@@ -28,8 +28,18 @@ describe("CapRover deployment", () => {
   test("keeps database setup assets in the runtime image", () => {
     expect(dockerfile).toContain("COPY --from=build /app/data ./data");
     expect(dockerfile).toContain("COPY --from=build /app/scripts/migrate.ts ./scripts/migrate.ts");
+    expect(dockerfile).toContain("COPY --from=build /app/scripts/reference-data.ts ./scripts/reference-data.ts");
     expect(dockerfile).toContain("COPY --from=build /app/scripts/seed.ts ./scripts/seed.ts");
     expect(dockerfile).toContain("COPY --from=build /app/sql ./sql");
+  });
+
+  test("synchronizes reference data during migration", async () => {
+    const migration = await Bun.file("scripts/migrate.ts").text();
+    const referenceData = await Bun.file("scripts/reference-data.ts").text();
+    expect(migration).toContain("await seedReferenceData(connection)");
+    expect(referenceData).toContain("await connection.beginTransaction()");
+    expect(referenceData).toContain("await connection.commit()");
+    expect(referenceData).toContain("await connection.rollback()");
   });
 
   test("has a valid CapRover definition and excludes local-only files", () => {

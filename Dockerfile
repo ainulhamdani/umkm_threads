@@ -38,6 +38,7 @@ COPY --from=build /app/data ./data
 COPY --from=build /app/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --from=build /app/public ./public
 COPY --from=build /app/scripts/migrate.ts ./scripts/migrate.ts
+COPY --from=build /app/scripts/reference-data.ts ./scripts/reference-data.ts
 COPY --from=build /app/scripts/seed.ts ./scripts/seed.ts
 COPY --from=build /app/sql ./sql
 COPY --from=build /app/src/server ./src/server

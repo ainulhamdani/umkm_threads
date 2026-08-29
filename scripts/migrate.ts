@@ -2,6 +2,7 @@ import mysql from "mysql2/promise";
 import type { RowDataPacket } from "mysql2";
 import { readdir } from "node:fs/promises";
 import { config } from "../src/shared/config";
+import { seedReferenceData } from "./reference-data";
 
 function quoteIdentifier(value: string): string {
   if (!/^[a-zA-Z0-9_]+$/.test(value)) throw new Error("Nama database tidak valid.");
@@ -99,6 +100,7 @@ try {
     }
   }
   await migrateLegacySuperadmin(connection);
+  await seedReferenceData(connection);
   console.log(`Migrasi database ${config.db.name} selesai.`);
 } finally {
   await connection.end();
