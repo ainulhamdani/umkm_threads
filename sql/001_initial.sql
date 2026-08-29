@@ -42,9 +42,12 @@ CREATE TABLE IF NOT EXISTS media (
   mime_type VARCHAR(80) NOT NULL,
   byte_size INT UNSIGNED NOT NULL,
   alt_text VARCHAR(255) NOT NULL,
+  owner_type ENUM('SELLER', 'SUPERADMIN') NOT NULL,
+  owner_id BIGINT UNSIGNED NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_media_storage_key (storage_key)
+  UNIQUE KEY uq_media_storage_key (storage_key),
+  KEY idx_media_owner (owner_type, owner_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS shops (

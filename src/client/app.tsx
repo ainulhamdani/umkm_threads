@@ -3,6 +3,8 @@ import { ui } from "../shared/i18n";
 import { RESERVED_SHOP_SLUGS } from "../shared/validation";
 import { HomePage } from "./pages/HomePage";
 import { ShopPage } from "./pages/ShopPage";
+import { SellerAuthPage } from "./pages/SellerAuthPage";
+import { SellerDashboardPage } from "./pages/SellerDashboardPage";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -78,6 +80,6 @@ export function App() {
     document.title = `${ui.appName} | ${ui.appTagline}`;
   }, [path]);
 
-  const content = path === "/" ? <HomePage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
+  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
   return <AppShell>{content}</AppShell>;
 }

@@ -1,6 +1,7 @@
 import type { LocationLevel, ShopSearchParams } from "../../shared/types";
 import { createWhatsAppLink, listCategories, listLocations, listPublicShops, getPublicShop, type WhatsAppItemInput } from "../public-service";
 import { HttpError, json, methodNotAllowed, readJson } from "../http";
+import { appendCookie, CSRF_COOKIE, issueCsrfToken } from "../session";
 
 function optionalText(value: string | null, label: string, maxLength: number): string | undefined {
   const trimmed = value?.trim() ?? "";
@@ -39,6 +40,12 @@ function asCartItems(value: unknown): WhatsAppItemInput[] {
 
 export async function handlePublicRoute(request: Request, url: URL, segments: string[]): Promise<Response> {
   if (segments[0] !== "api") throw new HttpError(404, "NOT_FOUND", "Rute API tidak ditemukan.");
+  if (segments[1] === "csrf" && segments.length === 2) {
+    if (request.method !== "GET") return methodNotAllowed(["GET"]);
+    const csrf = await issueCsrfToken(request);
+    const response = json({ token: csrf.token });
+    return csrf.existing ? response : appendCookie(response, CSRF_COOKIE, csrf.token, 24 * 60 * 60, false);
+  }
   if (segments[1] === "shops" && segments.length === 2) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     return json(await listPublicShops(searchFromUrl(url)));

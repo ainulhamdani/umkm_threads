@@ -40,6 +40,21 @@ export type ProductSummary = {
   available: boolean;
 };
 
+export type SellerProduct = {
+  id: number;
+  mediaId: number;
+  imageUrl: string;
+  name: string;
+  priceIdr: number;
+  description: string | null;
+  primaryCategoryCode: string;
+  primaryCategory: ProductCategory;
+  secondaryCategoryCodes: string[];
+  secondaryCategories: ProductCategory[];
+  available: boolean;
+  visibilityStatus: string;
+};
+
 export type ShopSummary = {
   id: number;
   name: string;
