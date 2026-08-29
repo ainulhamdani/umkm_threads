@@ -5,6 +5,9 @@ const dockerIgnore = await Bun.file(".dockerignore").text();
 const captainDefinition = JSON.parse(await Bun.file("captain-definition").text()) as { schemaVersion: number; dockerfilePath: string };
 const entrypoint = await Bun.file("docker-entrypoint.sh").text();
 const attributes = await Bun.file(".gitattributes").text();
+const packageJson = JSON.parse(await Bun.file("package.json").text()) as { devDependencies?: Record<string, string> };
+const clientBuild = await Bun.file("scripts/build-client.ts").text();
+const styleSource = await Bun.file("src/client/styles.css").text();
 
 describe("CapRover deployment", () => {
   test("uses a pinned Bun multi-stage production image", () => {
@@ -26,6 +29,15 @@ describe("CapRover deployment", () => {
     expect(entrypoint).toContain("exec bun run server");
     expect(entrypoint.startsWith("#!/bin/sh\n")).toBe(true);
     expect(attributes).toContain("*.sh text eol=lf");
+  });
+
+  test("compiles the Tailwind stylesheet during the client build", () => {
+    expect(packageJson.devDependencies?.tailwindcss).toBeDefined();
+    expect(packageJson.devDependencies?.["@tailwindcss/cli"]).toBeDefined();
+    expect(clientBuild).toContain('"@tailwindcss/cli"');
+    expect(clientBuild).toContain('"src/client/styles.css"');
+    expect(clientBuild).toContain('"public/styles.css"');
+    expect(styleSource).toContain('@import "tailwindcss";');
   });
 
   test("keeps database setup assets in the runtime image", () => {

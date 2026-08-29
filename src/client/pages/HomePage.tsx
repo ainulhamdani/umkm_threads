@@ -102,11 +102,12 @@ export function HomePage() {
   }, [loading, result, hasFilters]);
   return (
     <>
-      <section className="hero">
-        <h1>Temukan toko lokal di sekitar Anda</h1>
-        <p>Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
+      <section className="grid gap-3 rounded-3xl bg-brand-100 px-6 py-8 sm:px-8 sm:py-10">
+        <p className="eyebrow">Katalog toko lokal Indonesia</p>
+        <h1 className="m-0 max-w-3xl text-3xl font-extrabold tracking-tight text-brand-900 sm:text-5xl">Temukan toko lokal di sekitar Anda</h1>
+        <p className="m-0 max-w-2xl text-base leading-7 text-[#49454f]">Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
       </section>
-      <section className="filter-panel" aria-label="Pencarian dan filter toko">
+      <section className="filter-panel shadow-sm" aria-label="Pencarian dan filter toko">
         <div className="filter-scroll">
           <form className="filter-row" onSubmit={submitSearch}>
             <div className="field filter-search-field">

@@ -15,4 +15,10 @@ if (!result.success) {
 
 console.log("Client bundle created in public/assets/app.js");
 
+const styles = Bun.spawn(["bunx", "--no-install", "@tailwindcss/cli", "-i", "src/client/styles.css", "-o", "public/styles.css"], { stdout: "inherit", stderr: "inherit" });
+const stylesExitCode = await styles.exited;
+if (stylesExitCode !== 0) process.exit(stylesExitCode);
+
+console.log("Tailwind stylesheet created in public/styles.css");
+
 export {};

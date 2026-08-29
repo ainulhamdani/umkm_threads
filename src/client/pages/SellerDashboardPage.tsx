@@ -15,20 +15,21 @@ function navigate(path: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-const navigationItems: Array<{ section: SellerSection; label: string; href: string }> = [
-  { section: "overview", label: "Ringkasan", href: "/seller/dashboard" },
-  { section: "shop", label: "Profil toko", href: "/seller/shop" },
-  { section: "products", label: "Produk", href: "/seller/products" },
-  { section: "phone", label: "Nomor WhatsApp", href: "/seller/phone" },
-  { section: "pin", label: "Keamanan", href: "/seller/pin" },
+const navigationItems: Array<{ section: SellerSection; label: string; href: string; icon: string }> = [
+  { section: "overview", label: "Ringkasan", href: "/seller/dashboard", icon: "⌂" },
+  { section: "shop", label: "Profil toko", href: "/seller/shop", icon: "▤" },
+  { section: "products", label: "Produk", href: "/seller/products", icon: "＋" },
+  { section: "phone", label: "Nomor WhatsApp", href: "/seller/phone", icon: "☎" },
+  { section: "pin", label: "Keamanan", href: "/seller/pin", icon: "⚙" },
 ];
 
 function SellerNavigation({ activeSection }: { activeSection?: SellerSection }) {
   return (
-    <nav className="seller-nav" aria-label="Menu penjual">
+    <nav className="flex gap-2 overflow-x-auto lg:grid lg:overflow-visible" aria-label="Menu penjual">
       {navigationItems.map((item) => (
-        <a className={activeSection === item.section ? "active" : ""} href={item.href} data-nav="true" aria-current={activeSection === item.section ? "page" : undefined} key={item.section}>
-          {item.label}
+        <a className={`group flex min-h-12 flex-none items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold no-underline transition-colors lg:w-full ${activeSection === item.section ? "bg-brand-600 text-white shadow-sm" : "text-[#49454f] hover:bg-brand-100"}`} href={item.href} data-nav="true" aria-current={activeSection === item.section ? "page" : undefined} key={item.section}>
+          <span className={`grid size-9 place-items-center rounded-xl text-base ${activeSection === item.section ? "bg-white/20" : "bg-brand-100 text-brand-900"}`} aria-hidden="true">{item.icon}</span>
+          <span>{item.label}</span>
         </a>
       ))}
     </nav>
@@ -38,16 +39,30 @@ function SellerNavigation({ activeSection }: { activeSection?: SellerSection }) 
 function SellerPageLayout({ title, description, activeSection, showNavigation = true, onLogout, children }: { title: string; description: string; activeSection?: SellerSection; showNavigation?: boolean; onLogout: () => void; children: React.ReactNode }) {
   return (
     <>
-      <section className="hero seller-hero">
-        <p className="eyebrow">Ruang penjual</p>
-        <h1>{title}</h1>
-        <p>{description}</p>
-        <div className="card-actions">
-          <button className="button button-text" type="button" onClick={onLogout}>{ui.logout}</button>
+      <div className={showNavigation ? "grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start" : "mx-auto max-w-3xl"}>
+        {showNavigation ? <aside className="rounded-3xl border border-brand-200 bg-white p-3 shadow-sm lg:sticky lg:top-24">
+          <div className="mb-4 flex items-center gap-3 border-b border-brand-100 px-3 py-2">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-600 font-extrabold text-white">TU</span>
+            <div>
+              <strong className="block text-sm font-extrabold text-brand-900">Threads UMKM</strong>
+              <span className="text-xs text-[#79747e]">Ruang penjual</span>
+            </div>
+          </div>
+          <p className="mb-2 px-3 text-xs font-extrabold uppercase tracking-[0.08em] text-[#79747e]">Kelola toko</p>
+          <SellerNavigation activeSection={activeSection} />
+        </aside> : null}
+        <div className="min-w-0">
+          <header className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-brand-200 pb-5">
+            <div className="grid gap-2">
+              <p className="eyebrow">Ruang penjual</p>
+              <h1 className="m-0 text-3xl font-extrabold tracking-tight text-brand-900 sm:text-4xl">{title}</h1>
+              <p className="m-0 max-w-2xl text-sm leading-6 text-[#49454f]">{description}</p>
+            </div>
+            <button className="inline-flex min-h-12 items-center justify-center rounded-full px-3 text-sm font-bold text-brand-600 transition-colors hover:bg-brand-100" type="button" onClick={onLogout}>{ui.logout}</button>
+          </header>
+          <section className="grid min-w-0 gap-5">{children}</section>
         </div>
-      </section>
-      {showNavigation ? <SellerNavigation activeSection={activeSection} /> : null}
-      <section className="seller-content">{children}</section>
+      </div>
       <AdsenseSlot placement="SELLER" />
     </>
   );
@@ -138,23 +153,23 @@ export function SellerDashboardPage({ setupMode = false, section = "overview" }:
   } else {
     content = (
       <>
-        <section className="seller-overview-card info-state">
+        <section className="grid gap-5 rounded-3xl border border-brand-200 bg-brand-100 p-6 text-[#49454f] shadow-sm">
           <div>
             <p className="eyebrow">Status toko</p>
-            <h2>{me.shop ? me.shop.name : "Profil toko belum dibuat"}</h2>
-            <p>{me.shop ? "Katalog Anda siap dikelola dan dibagikan kepada pelanggan." : "Buat profil toko untuk mulai menambahkan produk."}</p>
+            <h2 className="mb-1 mt-2 text-2xl font-extrabold text-brand-900">{me.shop ? me.shop.name : "Profil toko belum dibuat"}</h2>
+            <p className="m-0 leading-6">{me.shop ? "Katalog Anda siap dikelola dan dibagikan kepada pelanggan." : "Buat profil toko untuk mulai menambahkan produk."}</p>
           </div>
           {me.shop ? <>
-            <span className={`status-badge${me.shop.visibilityStatus === "HIDDEN" ? " error" : ""}`}>{me.shop.visibilityStatus === "HIDDEN" ? "Disembunyikan superadmin" : "Tampil untuk pelanggan"}</span>
-            <div className="card-actions">
-              <a className="button button-primary" href={`/${me.shop.slug}`} data-nav="true">Lihat katalog</a>
-              <a className="button button-secondary" href="/seller/shop" data-nav="true">Edit profil toko</a>
+            <span className={`inline-flex min-h-7 w-fit items-center rounded-full px-2.5 text-xs font-bold ${me.shop.visibilityStatus === "HIDDEN" ? "bg-[#ffdad6] text-[#410002]" : "bg-[#c8ffc7] text-[#002106]"}`}>{me.shop.visibilityStatus === "HIDDEN" ? "Disembunyikan superadmin" : "Tampil untuk pelanggan"}</span>
+            <div className="flex flex-wrap gap-2">
+              <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-brand-600 px-5 font-bold text-white no-underline shadow-sm transition-colors hover:bg-brand-900" href={`/${me.shop.slug}`} data-nav="true">Lihat katalog</a>
+              <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-white px-5 font-bold text-brand-900 no-underline transition-colors hover:bg-brand-200" href="/seller/shop" data-nav="true">Edit profil toko</a>
             </div>
-          </> : <a className="button button-primary" href="/seller/setup" data-nav="true">Buat profil toko</a>}
+          </> : <a className="inline-flex min-h-12 w-fit items-center justify-center rounded-full bg-brand-600 px-5 font-bold text-white no-underline shadow-sm transition-colors hover:bg-brand-900" href="/seller/setup" data-nav="true">Buat profil toko</a>}
         </section>
-        <div className="seller-stat-grid" aria-label="Ringkasan katalog">
-          <article className="seller-stat-card"><strong>{me.productCount}</strong><span>Total produk</span></article>
-          <article className="seller-stat-card"><strong>{me.availableProductCount}</strong><span>Produk tersedia</span></article>
+        <div className="grid grid-cols-2 gap-3" aria-label="Ringkasan katalog">
+          <article className="grid gap-1 rounded-3xl border border-brand-200 bg-white p-5 shadow-sm"><strong className="text-3xl font-extrabold leading-none text-brand-900">{me.productCount}</strong><span className="text-sm text-[#79747e]">Total produk</span></article>
+          <article className="grid gap-1 rounded-3xl border border-brand-200 bg-white p-5 shadow-sm"><strong className="text-3xl font-extrabold leading-none text-brand-900">{me.availableProductCount}</strong><span className="text-sm text-[#79747e]">Produk tersedia</span></article>
         </div>
       </>
     );
