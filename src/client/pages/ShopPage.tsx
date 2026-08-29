@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ApiError, getShop } from "../api";
+import { ApiError, getShop, trackEvent } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { CartDrawer, type CartLine } from "../components/CartDrawer";
 import { ProductCard } from "../components/ProductCard";
 import { ui } from "../../shared/i18n";
 import type { ProductSummary, PublicShop } from "../../shared/types";
-import { setCanonical, setMeta } from "../seo";
+import { removeMeta, setCanonical, setMeta } from "../seo";
 
 type StoredCart = { shopId: number; shopSlug: string; shopName: string; lines: Array<{ productId: number; quantity: number }> };
 const CART_STORAGE_KEY = "threads-umkm-cart";
@@ -78,6 +78,7 @@ export function ShopPage({ slug }: { slug: string }) {
     setMeta("og:url", new URL(`/${shop.slug}`, window.location.origin).toString(), "property");
     const image = shop.profileImageUrl ?? shop.products[0]?.imageUrl;
     if (image) setMeta("og:image", new URL(image, window.location.origin).toString(), "property");
+    else removeMeta("og:image", "property");
     setCanonical(`/${shop.slug}`);
   }, [shop]);
 
@@ -94,6 +95,8 @@ export function ShopPage({ slug }: { slug: string }) {
       if (!replace) return;
       setCart({ shopId: shop.id, shopSlug: shop.slug, shopName: shop.name, lines: [] });
     }
+    const previousQuantity = quantityByProduct.get(product.id) ?? 0;
+    if (previousQuantity === 0 && nextQuantity > 0) trackEvent("product_added_to_cart", { productId: product.id });
     setCart((current) => {
       const base = current && current.shopId === shop.id ? current : { shopId: shop.id, shopSlug: shop.slug, shopName: shop.name, lines: [] };
       const withoutProduct = base.lines.filter((line) => line.product.id !== product.id);

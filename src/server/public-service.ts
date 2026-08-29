@@ -4,6 +4,7 @@ import type { LocationLevel, LocationOption, ProductSummary, PublicShop, ShopAdd
 import { normalizeIndonesianPhone, validateShopSlug } from "../shared/validation";
 import { HttpError } from "./http";
 import { db } from "./db";
+import { recordAuditSafely } from "./audit";
 
 type ShopRow = RowDataPacket & {
   id: number;
@@ -116,8 +117,9 @@ function parseLimit(value: string | null): number {
 
 function parseOffset(cursor: string | null): number {
   if (!cursor) return 0;
-  const parsed = Number.parseInt(cursor, 10);
-  if (!Number.isInteger(parsed) || parsed < 0) throw new HttpError(400, "INVALID_CURSOR", "Penanda halaman tidak valid.");
+  if (!/^\d+$/.test(cursor)) throw new HttpError(400, "INVALID_CURSOR", "Penanda halaman tidak valid.");
+  const parsed = Number(cursor);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new HttpError(400, "INVALID_CURSOR", "Penanda halaman tidak valid.");
   return parsed;
 }
 
@@ -206,11 +208,12 @@ export async function listPublicShops(search: ShopSearchParams): Promise<ShopSea
   await validatePublicSearch(search);
   const location = locationConditions(search);
   const products = productConditions(search);
-  const where = ["s.visibility_status = 'PUBLISHED'", "se.status = 'ACTIVE'", ...location.sql, `EXISTS (SELECT 1 FROM products p WHERE p.shop_id = s.id AND ${products.sql.join(" AND ")})`];
-  const baseParams = [...location.params, ...products.params];
+  const hasProductFilters = Boolean(search.q || search.categoryCode);
+  const where = ["s.visibility_status = 'PUBLISHED'", "se.status = 'ACTIVE'", ...location.sql, ...(hasProductFilters ? [`EXISTS (SELECT 1 FROM products p WHERE p.shop_id = s.id AND ${products.sql.join(" AND ")})`] : [])];
+  const baseParams = [...location.params, ...(hasProductFilters ? products.params : [])];
   const [countRows] = await db.execute<RowDataPacket[]>(`SELECT COUNT(DISTINCT s.id) AS total FROM shops s JOIN sellers se ON se.id = s.seller_id WHERE ${where.join(" AND ")}`, baseParams);
   const total = Number(countRows[0]?.total ?? 0);
-  const limit = search.limit ?? 24;
+  const limit = parseLimit(search.limit === undefined ? null : String(search.limit));
   const offset = parseOffset(search.cursor ?? null);
   const [rows] = await db.execute<ShopRow[]>(
     `${SHOP_SELECT} WHERE ${where.join(" AND ")} ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?`,
@@ -282,6 +285,6 @@ export async function createWhatsAppLink(slug: string, items: WhatsAppItemInput[
     "Mohon konfirmasi ketersediaan, pembayaran, dan pengiriman.",
   ].filter(Boolean);
   const phone = normalizeIndonesianPhone(shop.phone).value.replace(/\D/g, "");
-  await db.execute("INSERT INTO audit_logs (actor_type, action_code, target_type, target_id, metadata_json) VALUES ('SYSTEM', 'WHATSAPP_LINK_CREATED', 'SHOP', ?, ?)", [shop.id, JSON.stringify({ productCount: resultItems.length, subtotalIdr })]);
+  recordAuditSafely("SYSTEM", null, "whatsapp_link_generated", "SHOP", shop.id, { productCount: resultItems.length, subtotalIdr });
   return { shop: { name: shop.name }, items: resultItems, subtotalIdr, whatsappUrl: `https://wa.me/${phone}?text=${encodeURIComponent(messageLines.join("\n"))}` };
 }

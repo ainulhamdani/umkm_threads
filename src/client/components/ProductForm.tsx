@@ -17,6 +17,7 @@ export function ProductForm({ categories, product, onSaved, onCancel }: Props) {
   const [preview, setPreview] = useState(product?.imageUrl ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => { setName(product?.name ?? ""); setPrice(product ? String(product.priceIdr) : ""); setDescription(product?.description ?? ""); setPrimary(product?.primaryCategoryCode ?? categories[0]?.code ?? ""); setSecondary(product?.secondaryCategoryCodes ?? []); setAvailable(product?.available ?? true); setFile(null); setPreview(product?.imageUrl ?? null); }, [product, categories]);
   useEffect(() => () => { if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview); }, [preview]);
@@ -37,9 +38,11 @@ export function ProductForm({ categories, product, onSaved, onCancel }: Props) {
       if (imageErrors.length > 0) { setError(imageErrors[0] ?? "Gambar tidak valid."); return; }
     }
     setBusy(true);
+    setStatus(file ? ui.uploading : ui.saving);
     try {
       let mediaId = product?.mediaId;
       if (file) mediaId = (await uploadMedia(file, `Foto produk ${name}`)).id;
+      setStatus(ui.saving);
       const payload = { mediaId, name, priceIdr: Number(price), primaryCategoryCode: primary, secondaryCategoryCodes: secondary, description: description || null, available };
       const saved = product ? await updateSellerProduct(product.id, payload) : await createSellerProduct(payload);
       onSaved(saved);
@@ -47,6 +50,7 @@ export function ProductForm({ categories, product, onSaved, onCancel }: Props) {
       setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }
 
@@ -60,6 +64,7 @@ export function ProductForm({ categories, product, onSaved, onCancel }: Props) {
       <fieldset className="field"><legend>Kategori tambahan (maksimal dua)</legend>{categories.map((category) => <label className="checkbox-row" key={category.code}><input type="checkbox" checked={secondary.includes(category.code)} disabled={category.code === primary} onChange={(event) => setSelectedCategory(category.code, event.target.checked)} />{category.label}</label>)}</fieldset>
       <div className="field"><label htmlFor="product-description">Deskripsi (opsional)</label><textarea id="product-description" maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
       <label className="checkbox-row"><input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />{ui.available}</label>
+      {status ? <div className="info-state" role="status" aria-live="polite">{status}</div> : null}
       {error ? <div className="form-error" role="alert">{error}</div> : null}
       <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}>{busy ? ui.loading : ui.save}</button><button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button></div>
     </form>

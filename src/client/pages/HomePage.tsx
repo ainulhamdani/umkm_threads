@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, getCategories, getLocations, listShops } from "../api";
+import { ApiError, getCategories, getLocations, listShops, trackEvent } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { LocationFilters } from "../components/LocationFilters";
 import { ShopCard } from "../components/ShopCard";
@@ -34,6 +34,8 @@ export function HomePage() {
   const [cities, setCities] = useState<LocationOption[]>([]);
   const [districts, setDistricts] = useState<LocationOption[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [locationLoading, setLocationLoading] = useState({ provinces: true, cities: false, districts: false });
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [result, setResult] = useState<ShopSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,20 +49,23 @@ export function HomePage() {
     window.addEventListener("popstate", onPopState);
     Promise.all([getLocations("PROVINCE"), getCategories()])
       .then(([locationResult, categoryResult]) => { setProvinces(locationResult.items); setCategories(categoryResult.items); })
+      .finally(() => { setLocationLoading((current) => ({ ...current, provinces: false })); setCategoriesLoading(false); })
       .catch((reason: unknown) => setError(errorMessage(reason)));
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   useEffect(() => {
-    if (!filters.provinceCode) { setCities([]); return; }
+    if (!filters.provinceCode) { setCities([]); setLocationLoading((current) => ({ ...current, cities: false })); return; }
     setCities([]);
-    getLocations("CITY_REGENCY", filters.provinceCode).then((response) => setCities(response.items)).catch((reason: unknown) => setError(errorMessage(reason)));
+    setLocationLoading((current) => ({ ...current, cities: true }));
+    getLocations("CITY_REGENCY", filters.provinceCode).then((response) => setCities(response.items)).catch((reason: unknown) => setError(errorMessage(reason))).finally(() => setLocationLoading((current) => ({ ...current, cities: false })));
   }, [filters.provinceCode]);
 
   useEffect(() => {
-    if (!filters.cityRegencyCode) { setDistricts([]); return; }
+    if (!filters.cityRegencyCode) { setDistricts([]); setLocationLoading((current) => ({ ...current, districts: false })); return; }
     setDistricts([]);
-    getLocations("DISTRICT", filters.cityRegencyCode).then((response) => setDistricts(response.items)).catch((reason: unknown) => setError(errorMessage(reason)));
+    setLocationLoading((current) => ({ ...current, districts: true }));
+    getLocations("DISTRICT", filters.cityRegencyCode).then((response) => setDistricts(response.items)).catch((reason: unknown) => setError(errorMessage(reason))).finally(() => setLocationLoading((current) => ({ ...current, districts: false })));
   }, [filters.cityRegencyCode]);
 
   useEffect(() => {
@@ -73,17 +78,28 @@ export function HomePage() {
     setFilters(writeFilters(next));
   }
 
+  function applyFilter(next: ShopSearchParams) {
+    const filterCount = [next.provinceCode, next.cityRegencyCode, next.districtCode, next.categoryCode].filter(Boolean).length;
+    trackEvent("home_filter_applied", { filterCount, ...(next.categoryCode ? { categoryCode: next.categoryCode } : {}) });
+    apply(next);
+  }
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    trackEvent("home_search_submitted", { queryLength: searchInput.trim().length });
     apply({ ...filters, q: searchInput.trim() || undefined });
   }
 
   function clearFilters() {
     setSearchInput("");
+    trackEvent("home_filter_applied", { filterCount: 0 });
     apply({});
   }
 
   const hasFilters = Boolean(filters.q || filters.provinceCode || filters.cityRegencyCode || filters.districtCode || filters.categoryCode);
+  useEffect(() => {
+    if (!loading && result && result.items.length === 0 && hasFilters) trackEvent("home_search_no_results", { resultCount: 0 });
+  }, [loading, result, hasFilters]);
   return (
     <>
       <section className="hero">
@@ -106,14 +122,15 @@ export function HomePage() {
           provinces={provinces}
           cities={cities}
           districts={districts}
-          onProvinceChange={(value) => apply({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
-          onCityChange={(value) => apply({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
-          onDistrictChange={(value) => apply({ ...filters, districtCode: value || undefined })}
+          onProvinceChange={(value) => applyFilter({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
+          onCityChange={(value) => applyFilter({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
+          onDistrictChange={(value) => applyFilter({ ...filters, districtCode: value || undefined })}
+          loading={locationLoading}
         />
         <div className="field">
           <label htmlFor="product-category">{ui.category}</label>
-          <select id="product-category" value={filters.categoryCode ?? ""} onChange={(event) => apply({ ...filters, categoryCode: event.target.value || undefined })}>
-            <option value="">{ui.allCategories}</option>
+          <select id="product-category" value={filters.categoryCode ?? ""} disabled={categoriesLoading} aria-busy={categoriesLoading} onChange={(event) => applyFilter({ ...filters, categoryCode: event.target.value || undefined })}>
+            <option value="">{categoriesLoading ? "Memuat kategori..." : ui.allCategories}</option>
             {categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
           </select>
         </div>

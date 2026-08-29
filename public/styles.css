@@ -54,6 +54,8 @@ a { color: var(--md-primary); }
 .form-card { display: grid; gap: 18px; max-width: 720px; padding: 20px; border: 1px solid var(--md-outline-variant); border-radius: 24px; background: var(--md-surface-container); box-shadow: var(--md-shadow); }
 .field-grid { display: grid; gap: 16px; }
 .field { display: grid; gap: 6px; }
+.field fieldset, fieldset.field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.field legend { padding: 0; color: #49454f; font-size: 0.875rem; font-weight: 700; }
 .field label { color: #49454f; font-size: 0.875rem; font-weight: 700; }
 .field input, .field select, .field textarea { width: 100%; min-height: 52px; border: 1px solid var(--md-outline); border-radius: 4px; padding: 12px 14px; color: #1d1b20; background: var(--md-surface); }
 .field textarea { min-height: 112px; resize: vertical; }
@@ -90,6 +92,7 @@ a { color: var(--md-primary); }
 .product-grid { display: grid; gap: 16px; }
 .product-card { display: grid; overflow: hidden; border: 1px solid var(--md-outline-variant); border-radius: 20px; background: #ffffff; }
 .product-card img { width: 100%; aspect-ratio: 1.1; object-fit: cover; background: var(--md-surface-container-high); }
+.product-form-preview { display: block; width: min(240px, 100%); aspect-ratio: 1; object-fit: cover; border-radius: 16px; background: var(--md-surface-container-high); }
 .product-card-body { display: grid; gap: 10px; padding: 16px; }
 .product-card h3 { margin: 0; }
 .price { color: var(--md-on-primary-container); font-weight: 800; }
@@ -124,7 +127,7 @@ a { color: var(--md-primary); }
   .cart-drawer { inset: 0 0 0 auto; width: min(440px, 100%); max-height: none; border-top: 0; border-left: 1px solid var(--md-outline-variant); border-radius: 28px 0 0 28px; }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1024px) {
   .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-grid { grid-template-columns: minmax(0, 1fr) minmax(320px, 0.6fr); align-items: start; }

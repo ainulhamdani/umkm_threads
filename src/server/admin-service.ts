@@ -3,6 +3,7 @@ import { getCategory } from "../shared/categories";
 import { validateText } from "../shared/validation";
 import { db } from "./db";
 import { HttpError } from "./http";
+import { recordAudit } from "./audit";
 import { revokeAllSellerSessions } from "./session";
 
 type AdminRow = RowDataPacket & { id: number; email: string; password_hash: string; status: string };
@@ -59,14 +60,14 @@ export async function setShopVisibility(adminId: number, shopIdValue: string, vi
   const shopId = idValue(shopIdValue);
   const [result] = await db.execute<ResultSetHeader>("UPDATE shops SET visibility_status = ? WHERE id = ?", [visible ? "PUBLISHED" : "HIDDEN", shopId]);
   if (result.affectedRows === 0) throw new HttpError(404, "SHOP_NOT_FOUND", "Toko tidak ditemukan.");
-  await audit(adminId, "SHOP_VISIBILITY_CHANGED", "SHOP", shopId, { visible });
+  await recordAudit("SUPERADMIN", adminId, "admin_visibility_changed", "SHOP", shopId, { resource: "shop", visible });
 }
 
 export async function setProductVisibility(adminId: number, productIdValue: string, visible: boolean): Promise<void> {
   const productId = idValue(productIdValue);
   const [result] = await db.execute<ResultSetHeader>("UPDATE products SET visibility_status = ? WHERE id = ?", [visible ? "PUBLISHED" : "HIDDEN", productId]);
   if (result.affectedRows === 0) throw new HttpError(404, "PRODUCT_NOT_FOUND", "Produk tidak ditemukan.");
-  await audit(adminId, "PRODUCT_VISIBILITY_CHANGED", "PRODUCT", productId, { visible });
+  await recordAudit("SUPERADMIN", adminId, "admin_visibility_changed", "PRODUCT", productId, { resource: "product", visible });
 }
 
 export async function resetSellerPin(adminId: number, sellerIdValue: string): Promise<{ temporaryPin: string }> {
@@ -79,7 +80,7 @@ export async function resetSellerPin(adminId: number, sellerIdValue: string): Pr
   const pinHash = await Bun.password.hash(temporaryPin, { algorithm: "argon2id" });
   await db.execute("UPDATE sellers SET pin_hash = ?, pin_reset_required = TRUE WHERE id = ?", [pinHash, sellerId]);
   await revokeAllSellerSessions(sellerId);
-  await audit(adminId, "SELLER_PIN_RESET", "SELLER", sellerId, { resetRequired: true });
+  await recordAudit("SUPERADMIN", adminId, "seller_pin_reset", "SELLER", sellerId, { resetRequired: true });
   return { temporaryPin };
 }
 
@@ -110,15 +111,11 @@ export async function updateAdsenseSettings(adminId: number, input: Record<strin
   const values = ["HOME", "SHOP", "SELLER", "ADMIN"].map((key) => typeof slots[key] === "string" ? slots[key].trim().slice(0, 100) : "");
   if (input.enabled && (!clientId || values.some((value) => !/^\d+$/.test(value)))) invalid("Client ID dan semua slot wajib diisi saat AdSense diaktifkan.");
   await db.execute("UPDATE adsense_settings SET enabled = ?, client_id = ?, home_slot = ?, shop_slot = ?, seller_slot = ?, admin_slot = ?, updated_by = ? WHERE id = 1", [input.enabled, clientId || null, ...values.map((value) => value || null), adminId]);
-  await audit(adminId, "ADSENSE_SETTINGS_CHANGED", "ADSENSE", 1, { enabled: input.enabled });
+  await recordAudit("SUPERADMIN", adminId, "adsense_settings_changed", "ADSENSE", 1, { enabled: input.enabled });
   return getAdsenseSettings();
 }
 
 export async function listAuditLogs(): Promise<unknown[]> {
   const [rows] = await db.execute<RowDataPacket[]>("SELECT id, actor_type, actor_id, action_code, target_type, target_id, metadata_json, created_at FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT 100");
   return rows.map((row) => ({ id: Number(row.id), actorType: String(row.actor_type), actorId: row.actor_id === null ? null : Number(row.actor_id), actionCode: String(row.action_code), targetType: row.target_type ? String(row.target_type) : null, targetId: row.target_id === null ? null : Number(row.target_id), metadata: typeof row.metadata_json === "string" ? JSON.parse(row.metadata_json) : row.metadata_json, createdAt: String(row.created_at) }));
-}
-
-async function audit(adminId: number, actionCode: string, targetType: string, targetId: number, metadata: Record<string, unknown>): Promise<void> {
-  await db.execute("INSERT INTO audit_logs (actor_type, actor_id, action_code, target_type, target_id, metadata_json) VALUES ('SUPERADMIN', ?, ?, ?, ?, ?)", [adminId, actionCode, targetType, targetId, JSON.stringify(metadata)]);
 }

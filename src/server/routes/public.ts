@@ -2,7 +2,30 @@ import type { LocationLevel, ShopSearchParams } from "../../shared/types";
 import { getPublicAdPlacement, type AdPlacement } from "../admin-service";
 import { createWhatsAppLink, listCategories, listLocations, listPublicShops, getPublicShop, type WhatsAppItemInput } from "../public-service";
 import { HttpError, json, methodNotAllowed, readJson } from "../http";
-import { appendCookie, CSRF_COOKIE, issueCsrfToken } from "../session";
+import { appendCookie, assertCsrf, CSRF_COOKIE, issueCsrfToken } from "../session";
+import { recordAudit, recordAuditSafely } from "../audit";
+
+const CLIENT_EVENTS = new Set([
+  "shop_viewed",
+  "home_search_submitted",
+  "home_filter_applied",
+  "home_search_no_results",
+  "product_added_to_cart",
+  "whatsapp_link_generated",
+  "whatsapp_link_generation_failed",
+]);
+
+function safeEventMetadata(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const allowedKeys = new Set(["shopId", "productId", "resultCount", "filterCount", "queryLength", "categoryCode"]);
+  const output: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (!allowedKeys.has(key)) continue;
+    if (typeof item === "string") output[key] = item.trim().slice(0, 80);
+    else if (typeof item === "number" && Number.isSafeInteger(item) && item >= 0) output[key] = item;
+  }
+  return output;
+}
 
 function optionalText(value: string | null, label: string, maxLength: number): string | undefined {
   const trimmed = value?.trim() ?? "";
@@ -47,6 +70,15 @@ export async function handlePublicRoute(request: Request, url: URL, segments: st
     const response = json({ token: csrf.token });
     return csrf.existing ? response : appendCookie(response, CSRF_COOKIE, csrf.token, 24 * 60 * 60, false);
   }
+  if (segments[1] === "events" && segments.length === 2) {
+    if (request.method !== "POST") return methodNotAllowed(["POST"]);
+    const body = await readJson(request);
+    assertCsrf(request);
+    const event = typeof body.event === "string" ? body.event.trim() : "";
+    if (!CLIENT_EVENTS.has(event)) throw new HttpError(400, "INVALID_EVENT", "Aktivitas tidak valid.");
+    await recordAudit("SYSTEM", null, event, null, null, safeEventMetadata(body.metadata));
+    return json({ success: true });
+  }
   if (segments[1] === "shops" && segments.length === 2) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     return json(await listPublicShops(searchFromUrl(url)));
@@ -54,7 +86,9 @@ export async function handlePublicRoute(request: Request, url: URL, segments: st
   if (segments[1] === "shops" && segments.length === 3) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     const shop = await getPublicShop(segments[2] ?? "");
-    return shop ? json(shop) : json({ error: { code: "SHOP_NOT_FOUND", message: "Toko tidak ditemukan." } }, 404);
+    if (!shop) return json({ error: { code: "SHOP_NOT_FOUND", message: "Toko tidak ditemukan." } }, 404);
+    recordAuditSafely("SYSTEM", null, "shop_viewed", "SHOP", shop.id);
+    return json(shop);
   }
   if (segments[1] === "shops" && segments.length === 4 && segments[3] === "whatsapp-link") {
     if (request.method !== "POST") return methodNotAllowed(["POST"]);

@@ -4,6 +4,8 @@ import { authenticateSeller, changeSellerPhone, changeSellerPin, createShop, get
 import { createSellerProduct, listSellerProducts, updateSellerProduct, type ProductMutation } from "../product-service";
 import { appendCookie, assertCsrf, clearCookie, createSellerSession, getSellerSession, requireSeller, revokeAllSellerSessions, revokeSellerSession, SELLER_SESSION_COOKIE } from "../session";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "../rate-limit";
+import { recordAuditSafely } from "../audit";
+import { normalizeIndonesianPhone } from "../../shared/validation";
 
 const sessionMaxAge = config.sessionDays * 24 * 60 * 60;
 
@@ -33,7 +35,9 @@ export async function handleSellerRoute(request: Request, segments: string[]): P
     assertCsrf(request);
     const body = await readJson(request);
     const rawPhone = typeof body.phone === "string" ? body.phone : "kosong";
-    const key = `${clientIp(request)}:${rawPhone.trim().replace(/[\s().-]/g, "").toLowerCase()}`;
+    const normalizedPhone = normalizeIndonesianPhone(rawPhone);
+    const rateKeyPhone = normalizedPhone.errors.length === 0 ? normalizedPhone.value : rawPhone.trim().replace(/[\s().-]/g, "").toLowerCase();
+    const key = `${clientIp(request)}:${rateKeyPhone}`;
     checkLoginRateLimit(key);
     try {
       const result = await authenticateSeller(body.phone, body.pin);
@@ -42,7 +46,10 @@ export async function handleSellerRoute(request: Request, segments: string[]): P
       const token = await createSellerSession(result.sellerId);
       return sessionResponse({ sellerId: result.sellerId }, token);
     } catch (error) {
-      if (error instanceof HttpError && error.code === "LOGIN_FAILED") recordLoginFailure(key);
+      if (error instanceof HttpError && error.code === "LOGIN_FAILED") {
+        recordLoginFailure(key);
+        recordAuditSafely("SYSTEM", null, "seller_login_failure");
+      }
       throw error;
     }
   }

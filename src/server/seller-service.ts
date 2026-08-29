@@ -4,6 +4,7 @@ import { assertOwnedMedia, markMediaUsed } from "./media";
 import { db } from "./db";
 import { HttpError } from "./http";
 import { revokeAllSellerSessions } from "./session";
+import { recordAuditSafely } from "./audit";
 import { normalizeIndonesianPhone, validateAddressDetail, validatePin, validateShopSlug, validateText } from "../shared/validation";
 
 type SellerRow = RowDataPacket & { id: number; phone_e164: string; pin_hash: string; pin_reset_required: number; status: string };
@@ -88,7 +89,9 @@ export async function registerSeller(phoneInput: unknown, pinInput: unknown): Pr
   const pinHash = await Bun.password.hash(pinInput as string, { algorithm: "argon2id" });
   try {
     const [result] = await db.execute<ResultSetHeader>("INSERT INTO sellers (phone_e164, pin_hash) VALUES (?, ?)", [phone.value, pinHash]);
-    return { sellerId: Number(result.insertId) };
+    const sellerId = Number(result.insertId);
+    recordAuditSafely("SELLER", sellerId, "seller_registered", "SELLER", sellerId);
+    return { sellerId };
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ER_DUP_ENTRY") throw new HttpError(409, "PHONE_EXISTS", "Nomor telepon sudah terdaftar.");
     throw error;
@@ -102,7 +105,9 @@ export async function authenticateSeller(phoneInput: unknown, pinInput: unknown)
   const [rows] = await db.execute<SellerRow[]>("SELECT id, phone_e164, pin_hash, pin_reset_required, status FROM sellers WHERE phone_e164 = ? LIMIT 1", [phone.value]);
   const seller = rows[0];
   if (!seller || seller.status !== "ACTIVE" || !(await Bun.password.verify(pinInput as string, seller.pin_hash))) throw new HttpError(401, "LOGIN_FAILED", "Nomor telepon atau PIN tidak benar.");
-  return { sellerId: Number(seller.id) };
+  const sellerId = Number(seller.id);
+  recordAuditSafely("SELLER", sellerId, "seller_login_success", "SELLER", sellerId);
+  return { sellerId };
 }
 
 export async function getSellerMe(sellerId: number): Promise<unknown> {
@@ -119,8 +124,8 @@ export async function getSellerMe(sellerId: number): Promise<unknown> {
 }
 
 async function validatedShopInput(input: ShopMutation, sellerId: number, current?: ShopRow): Promise<{ name: string; slug: string; description: string | null; profileMediaId: number | null; provinceCode: string; cityRegencyCode: string; districtCode: string; addressDetail: string }> {
-  const name = textValue(input.name, "Nama toko", 2, 120);
-  const description = input.description === undefined || input.description === null || input.description === "" ? null : textValue(input.description, "Deskripsi toko", 2, 500);
+  const name = textValue(input.name, "Nama toko", 1, 120);
+  const description = input.description === undefined || input.description === null || input.description === "" ? null : textValue(input.description, "Deskripsi toko", 1, 500);
   const slug = current?.slug ?? String(input.slug ?? "").trim().toLowerCase();
   if (!current) {
     const slugErrors = validateShopSlug(slug);
@@ -157,6 +162,7 @@ export async function createShop(sellerId: number, input: ShopMutation): Promise
   const shop = await findShop(sellerId);
   if (!shop) throw new Error("Toko berhasil disimpan tetapi tidak dapat dibaca kembali.");
   if (values.profileMediaId !== null) await markMediaUsed(values.profileMediaId, "SELLER", sellerId);
+  recordAuditSafely("SELLER", sellerId, "shop_created", "SHOP", shop.id);
   return shopResource(shop);
 }
 
@@ -178,6 +184,7 @@ export async function updateShop(sellerId: number, input: ShopMutation & Record<
   const shop = await findShop(sellerId);
   if (!shop) throw new Error("Toko berhasil diperbarui tetapi tidak dapat dibaca kembali.");
   if (values.profileMediaId !== null) await markMediaUsed(values.profileMediaId, "SELLER", sellerId);
+  recordAuditSafely("SELLER", sellerId, "shop_updated", "SHOP", shop.id);
   return shopResource(shop);
 }
 
@@ -196,6 +203,7 @@ export async function changeSellerPhone(sellerId: number, currentPin: unknown, n
     throw error;
   }
   await revokeAllSellerSessions(sellerId);
+  recordAuditSafely("SELLER", sellerId, "seller_phone_changed", "SELLER", sellerId);
 }
 
 export async function changeSellerPin(sellerId: number, currentPin: unknown, newPin: unknown): Promise<void> {
@@ -206,4 +214,5 @@ export async function changeSellerPin(sellerId: number, currentPin: unknown, new
   const pinHash = await Bun.password.hash(newPin as string, { algorithm: "argon2id" });
   await db.execute("UPDATE sellers SET pin_hash = ?, pin_reset_required = FALSE WHERE id = ?", [pinHash, sellerId]);
   await revokeAllSellerSessions(sellerId);
+  recordAuditSafely("SELLER", sellerId, "seller_pin_changed", "SELLER", sellerId);
 }

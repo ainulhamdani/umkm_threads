@@ -23,6 +23,7 @@ describe("validasi marketplace", () => {
     expect(validatePrice(0)).toEqual([]);
     expect(validatePrice("0")).toEqual([]);
     expect(validatePrice(12.5)).not.toEqual([]);
+    expect(validatePrice("1e3")).not.toEqual([]);
   });
 
   test("membatasi kategori tambahan dan mencegah duplikat", () => {

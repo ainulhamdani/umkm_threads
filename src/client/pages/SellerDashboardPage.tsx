@@ -8,15 +8,19 @@ import { ui } from "../../shared/i18n";
 
 function navigate(path: string) { window.history.pushState({}, "", path); window.dispatchEvent(new PopStateEvent("popstate")); }
 
-export function SellerDashboardPage({ setupMode = false }: { setupMode?: boolean }) {
+export function SellerDashboardPage({ setupMode = false, section }: { setupMode?: boolean; section?: "shop" | "products" }) {
   const [me, setMe] = useState<SellerMe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingShop, setEditingShop] = useState(setupMode);
 
+  useEffect(() => {
+    if (section === "shop") setEditingShop(true);
+  }, [section]);
+
   function load() {
     setLoading(true); setError(null);
-    getSellerMe().then((result) => { setMe(result); if (!result.shop) setEditingShop(true); }).catch((reason: unknown) => { if (reason instanceof ApiError && reason.status === 401) setError("Sesi penjual berakhir. Silakan masuk kembali."); else setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); }).finally(() => setLoading(false));
+    getSellerMe().then((result) => { setMe(result); if (!result.shop) setEditingShop(true); }).catch((reason: unknown) => { if (reason instanceof ApiError && reason.status === 401) { navigate("/seller/login"); return; } setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); }).finally(() => setLoading(false));
   }
   useEffect(() => { load(); }, []);
 

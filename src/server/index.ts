@@ -6,10 +6,13 @@ import { handleSellerRoute } from "./routes/seller";
 import { handleMediaRoute } from "./routes/media";
 import { handleAdminRoute } from "./routes/admin";
 import { listPublishedShopSlugs } from "./public-service";
+import { getPublicShop } from "./public-service";
+import { RESERVED_SHOP_SLUGS } from "../shared/validation";
 
 const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
+const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/admin/login", "/admin"]);
 
 function xmlEscape(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
@@ -27,11 +30,43 @@ async function sitemapResponse(): Promise<Response> {
   return new Response(body, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" } });
 }
 
+function htmlEscape(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+async function appHtmlResponse(pathname: string, status = 200, shop: Awaited<ReturnType<typeof getPublicShop>> = null): Promise<Response> {
+  let html = await htmlFile.text();
+  const privateRoute = pathname.startsWith("/seller") || pathname.startsWith("/admin");
+  const title = shop ? `${shop.name} | Threads UMKM` : "Threads UMKM | Katalog Toko Lokal";
+  const description = shop ? `${shop.name} di ${[shop.address.provinceName, shop.address.cityRegencyName, shop.address.districtName].filter(Boolean).join(" · ")}. Lihat katalog produk UMKM dan hubungi penjual melalui WhatsApp.` : "Katalog toko UMKM Indonesia dan pemesanan langsung melalui WhatsApp.";
+  const robots = privateRoute || status !== 200 ? "noindex,nofollow" : "index,follow";
+  const canonicalPath = shop ? `/${shop.slug}` : privateRoute || status !== 200 ? pathname : "/";
+  const canonicalTag = `<link rel="canonical" href="${htmlEscape(`${config.publicAppUrl.replace(/\/$/, "")}${canonicalPath}`)}" />`;
+  html = html.replace(/<title>[^<]*<\/title>/i, `<title>${htmlEscape(title)}</title>`).replace(/<meta name="description" content="[^"]*" \/>/i, `<meta name="description" content="${htmlEscape(description)}" />`).replace(/<meta name="robots" content="[^"]*" \/>/i, `<meta name="robots" content="${robots}" />`).replace("</head>", `${canonicalTag}</head>`);
+  if (shop) {
+    const image = shop.profileImageUrl ?? shop.products[0]?.imageUrl;
+    const og = [`<meta property="og:title" content="${htmlEscape(title)}" />`, `<meta property="og:description" content="${htmlEscape(description)}" />`, `<meta property="og:type" content="website" />`, `<meta property="og:url" content="${htmlEscape(`${config.publicAppUrl.replace(/\/$/, "")}/${shop.slug}`)}" />`, image ? `<meta property="og:image" content="${htmlEscape(`${config.publicAppUrl.replace(/\/$/, "")}${image}`)}" />` : ""].filter(Boolean).join("");
+    html = html.replace("</head>", `${og}</head>`);
+  }
+  return new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8", "content-language": "id-ID", "x-content-type-options": "nosniff", "referrer-policy": "strict-origin-when-cross-origin" } });
+}
+
+function publicShopSlug(pathname: string): string | null {
+  if (!pathname.startsWith("/") || pathname.endsWith("/") || pathname.slice(1).includes("/")) return null;
+  try {
+    const slug = decodeURIComponent(pathname.slice(1));
+    return slug && !RESERVED_SHOP_SLUGS.has(slug.toLowerCase()) ? slug : null;
+  } catch (error) {
+    console.warn("URL toko tidak dapat dibaca.", error);
+    return null;
+  }
+}
+
 const server = Bun.serve({
   port: config.port,
   async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname === "/health") return Response.json({ status: "ok" });
+    if (url.pathname === "/health") return jsonResponse({ status: "ok" });
     if (url.pathname === "/assets/app.js") return new Response(clientBundle, { headers: { "content-type": "text/javascript; charset=utf-8" } });
     if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"));
     if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8" } });
@@ -66,8 +101,22 @@ const server = Bun.serve({
         return fail(500, "INTERNAL_ERROR", "Terjadi kesalahan pada server.");
       }
     }
-    return new Response(htmlFile, { headers: { "content-type": "text/html; charset=utf-8" } });
+    const slug = publicShopSlug(url.pathname);
+    if (slug) {
+      try {
+        const shop = await getPublicShop(slug);
+        return appHtmlResponse(url.pathname, shop ? 200 : 404, shop);
+      } catch (error) {
+        console.error("Kesalahan halaman toko", error);
+        return fail(500, "INTERNAL_ERROR", "Halaman toko belum dapat dimuat.");
+      }
+    }
+    return appHtmlResponse(url.pathname, APPLICATION_ROUTES.has(url.pathname) ? 200 : 404);
   },
 });
 
 console.log(`Threads UMKM berjalan di http://localhost:${server.port}`);
+
+function jsonResponse(data: unknown): Response {
+  return Response.json(data, { headers: { "cache-control": "no-store", "content-language": "id-ID", "x-content-type-options": "nosniff" } });
+}

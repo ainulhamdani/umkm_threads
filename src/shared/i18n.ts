@@ -25,6 +25,8 @@ export const ui = {
   save: "Simpan",
   cancel: "Batal",
   loading: "Memuat...",
+  uploading: "Mengunggah foto...",
+  saving: "Menyimpan...",
   noShops: "Belum ada toko yang dapat ditampilkan.",
   noResults: "Tidak ada hasil yang sesuai.",
   noProducts: "Belum ada produk yang tersedia.",

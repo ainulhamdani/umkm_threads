@@ -38,6 +38,18 @@ function actionLabel(code: string): string {
     SELLER_PIN_RESET: "PIN penjual diatur ulang",
     ADSENSE_SETTINGS_CHANGED: "Pengaturan iklan diubah",
     WHATSAPP_LINK_CREATED: "Tautan WhatsApp dibuat",
+    seller_registered: "Penjual mendaftar",
+    seller_login_success: "Penjual masuk",
+    seller_login_failure: "Percobaan masuk penjual gagal",
+    shop_created: "Toko dibuat",
+    shop_updated: "Profil toko diperbarui",
+    product_created: "Produk dibuat",
+    product_updated: "Produk diperbarui",
+    product_availability_changed: "Ketersediaan produk diubah",
+    admin_visibility_changed: "Visibilitas konten diubah",
+    seller_pin_reset: "PIN penjual diatur ulang",
+    adsense_settings_changed: "Pengaturan iklan diubah",
+    whatsapp_link_generated: "Tautan WhatsApp dibuat",
   };
   return labels[code] ?? "Aktivitas sistem";
 }
@@ -67,8 +79,11 @@ export function AdminPage() {
         setAds(adResult);
       })
       .catch((reason: unknown) => {
-        if (reason instanceof ApiError && reason.status === 401) setError("Sesi superadmin berakhir. Silakan masuk kembali.");
-        else setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+        if (reason instanceof ApiError && reason.status === 401) {
+          navigate("/admin/login");
+          return;
+        }
+        setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
       })
       .finally(() => setLoading(false));
   }

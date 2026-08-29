@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.4.0",
+  "engines": {
+    "bun": ">=1.4.0 <1.5.0"
+  },
   "scripts": {
     "dev": "bun run build:client && bun run server",
     "build:client": "bun scripts/build-client.ts",
     "server": "bun src/server/index.ts",
     "start": "bun run build:client && bun run server",
+    "lint": "bun run typecheck",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "db:migrate": "bun scripts/migrate.ts",

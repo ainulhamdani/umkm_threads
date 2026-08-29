@@ -43,6 +43,8 @@ const connection = await mysql.createConnection({
 });
 
 try {
+  const categoryPlaceholders = PRODUCT_CATEGORIES.map(() => "?").join(", ");
+  await connection.execute(`UPDATE product_categories SET active = FALSE WHERE code NOT IN (${categoryPlaceholders})`, PRODUCT_CATEGORIES.map((category) => category.code));
   for (const category of PRODUCT_CATEGORIES) {
     await connection.execute(
       "INSERT INTO product_categories (code, label, display_order, active) VALUES (?, ?, ?, TRUE) ON DUPLICATE KEY UPDATE label = VALUES(label), display_order = VALUES(display_order), active = TRUE",
@@ -50,6 +52,7 @@ try {
     );
   }
 
+  await connection.execute("UPDATE locations SET active = FALSE");
   for (const location of dataset.locations) {
     await connection.execute(
       "INSERT INTO locations (code, level, name, parent_code, dataset_version, active) VALUES (?, ?, ?, ?, ?, TRUE) ON DUPLICATE KEY UPDATE level = VALUES(level), name = VALUES(name), parent_code = VALUES(parent_code), dataset_version = VALUES(dataset_version), active = TRUE",

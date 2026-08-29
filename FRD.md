@@ -5,7 +5,7 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP implementation specification |
-| Version | 1.3 |
+| Version | 1.4 |
 | Date | 2026-08-29 |
 | Application stack | Bun 1.4.x, React 19.2, TypeScript |
 | Design guidance | Mobile-first Material Design 3 |
@@ -282,7 +282,7 @@ The console has one application role, `SUPERADMIN`. Unauthenticated visitors mus
 | `city_regency_code` | Required foreign key to a `CITY_REGENCY` location whose parent is `province_code`. |
 | `district_code` | Required foreign key to a `DISTRICT` location whose parent is `city_regency_code`. |
 | `address_detail` | Required, trimmed street or landmark address text. |
-| `visibility` | `PUBLISHED` or `HIDDEN`; seller save defaults to `PUBLISHED`. |
+| `visibility_status` | `PUBLISHED` or `HIDDEN`; seller save defaults to `PUBLISHED`. |
 | `created_at` | Required timestamp. |
 | `updated_at` | Required timestamp. |
 
@@ -306,10 +306,12 @@ Required database indexes are `level`, `parent_code`, and `(level, parent_code, 
 Store one active record for the bundled location snapshot:
 
 - `source_url`.
+- `snapshot_url` when the source dataset is mirrored or downloaded from a public snapshot endpoint.
 - `retrieved_at`.
 - `dataset_version`.
-- `record_count`.
-- `checksum`.
+- `checksum_sha256` for the canonical serialized location rows.
+- `row_count`.
+- `active`, with exactly one active dataset metadata record after seeding.
 
 The seed process must reject orphaned child records, duplicate codes, invalid levels, and multiple active dataset versions.
 
@@ -324,8 +326,8 @@ The seed process must reject orphaned child records, duplicate codes, invalid le
 | `description` | Optional trimmed text. |
 | `price_idr` | Required non-negative integer. |
 | `primary_category_code` | Required foreign key to one active `product_categories` record. |
-| `availability` | `AVAILABLE` or `UNAVAILABLE`; seller-controlled. |
-| `visibility` | `PUBLISHED` or `HIDDEN`; superadmin-controlled. |
+| `available` | Boolean seller-controlled availability flag. `TRUE` means the product can be added to a cart. |
+| `visibility_status` | `PUBLISHED` or `HIDDEN`; superadmin-controlled. |
 | `created_at` | Required timestamp. |
 | `updated_at` | Required timestamp. |
 
@@ -356,13 +358,13 @@ Seed the fixed category taxonomy with these codes and labels:
 
 ### 6.7 `product_category_assignments`
 
-Store only secondary category assignments separately. The product's `primary_category_code` is the canonical primary category.
+Store only secondary category assignments separately. The product's `primary_category_code` is the canonical primary category. The API type still exposes both `PRIMARY` and `SECONDARY` roles so a client can represent the complete assignment set.
 
 | Field | Type and rules |
 | --- | --- |
 | `product_id` | Required foreign key to `products`. |
 | `category_code` | Required foreign key to `product_categories`. |
-| `role` | Always `SECONDARY` in the persisted secondary-assignment table. |
+| `role` | Always `SECONDARY` in the persisted secondary-assignment table. `PRIMARY` is represented by `products.primary_category_code`. |
 | `position` | `1` or `2`; unique per product. |
 
 Enforce a unique `(product_id, category_code)` pair and a unique `(product_id, position)` pair. The service transaction must reject more than two rows and must reject a secondary category equal to `primary_category_code`. The category filter matches the product primary field or a secondary assignment.
@@ -377,8 +379,11 @@ Enforce a unique `(product_id, category_code)` pair and a unique `(product_id, p
 | `byte_size` | Required positive integer. |
 | `width` | Required positive integer after inspection. |
 | `height` | Required positive integer after inspection. |
-| `original_name` | Optional sanitized source name for support only. |
-| `created_by_seller_id` | Optional foreign key for ownership checks. |
+| `original_name` | Required sanitized source name for support only. |
+| `alt_text` | Required Bahasa Indonesia alternative text. |
+| `owner_type` | `SELLER` or `SUPERADMIN`. |
+| `owner_id` | Required owner identifier used for upload ownership checks. |
+| `used_at` | Null until a shop or product references the media; unused media can be cleaned up. |
 | `created_at` | Required timestamp. |
 
 ### 6.9 `seller_sessions`
@@ -411,15 +416,15 @@ Use the same session rules as seller sessions, with a separate table or an actor
 
 ### 6.12 `adsense_settings`
 
-Use one active settings record containing:
+Use one settings record containing:
 
 - `enabled`.
 - `client_id`.
-- `home_slot_id`.
-- `shop_slot_id`.
-- `seller_slot_id`.
-- `admin_slot_id`.
-- `updated_by_superadmin_id`.
+- `home_slot`.
+- `shop_slot`.
+- `seller_slot`.
+- `admin_slot`.
+- `updated_by` as the superadmin identifier.
 - `updated_at`.
 
 The settings API must redact or protect values as appropriate for the frontend. The superadmin is the only actor allowed to update them.
@@ -463,6 +468,7 @@ Successful mutation responses should return the updated resource or a minimal re
 | `GET` | `/api/locations` | Return location options from the seeded dataset. Accept `level` and, for child levels, `parentCode`. |
 | `GET` | `/api/product-categories` | Return the active fixed product category taxonomy in display order. |
 | `POST` | `/api/shops/{slug}/whatsapp-link` | Validate submitted cart item IDs and quantities, calculate current totals, record a click event, and return a WhatsApp URL. Do not create an order. |
+| `POST` | `/api/events` | Accept an allowlisted client activity event with filtered metadata for discovery, cart, and WhatsApp analytics. Do not accept secrets or arbitrary metadata. |
 
 The `GET /api/shops` query parameters are:
 
@@ -666,7 +672,7 @@ The media endpoint accepts `multipart/form-data`, while all metadata and mutatio
 
 | Method | Path | Behavior |
 | --- | --- | --- |
-| `POST` | `/api/admin/login` | Authenticate the seeded or provisioned superadmin account. |
+| `POST` | `/api/admin/login` | Authenticate the seeded or provisioned superadmin account with email and password. |
 | `POST` | `/api/admin/logout` | Revoke the current superadmin session. |
 | `GET` | `/api/admin/sellers` | Return seller support and status data without PIN hashes. |
 | `POST` | `/api/admin/sellers/{id}/pin-reset` | Replace a seller PIN with a new six-digit temporary PIN, mark reset required, revoke sessions, and show the new PIN once to the superadmin. Never return the old PIN. |

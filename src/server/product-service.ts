@@ -6,6 +6,7 @@ import { validatePrice, validateText } from "../shared/validation";
 import { assertOwnedMedia } from "./media";
 import { db } from "./db";
 import { HttpError } from "./http";
+import { recordAuditSafely } from "./audit";
 
 type ProductRow = RowDataPacket & {
   id: number; shop_id: number; media_id: number; name: string; price_idr: number | string; description: string | null;
@@ -100,7 +101,7 @@ function validateCategories(primary: unknown, secondary: unknown): { primary: st
 
 async function mutationValues(sellerId: number, input: ProductMutation, current?: SellerProduct): Promise<{ mediaId: number; name: string; priceIdr: number; primary: string; secondary: string[]; description: string | null; available: boolean }> {
   const mediaId = await assertOwnedMedia(input.mediaId ?? current?.mediaId, "SELLER", sellerId);
-  const name = requiredText(input.name ?? current?.name, "Nama produk", 2, 160);
+  const name = requiredText(input.name ?? current?.name, "Nama produk", 1, 160);
   const rawPrice = input.priceIdr ?? current?.priceIdr;
   const priceErrors = validatePrice(rawPrice);
   if (priceErrors.length > 0) invalid(priceErrors);
@@ -109,7 +110,7 @@ async function mutationValues(sellerId: number, input: ProductMutation, current?
   const secondaryCodes = input.secondaryCategoryCodes ?? current?.secondaryCategoryCodes ?? [];
   const categories = validateCategories(primaryCode, secondaryCodes);
   let description: string | null = current?.description ?? null;
-  if (input.description !== undefined) description = input.description === null || input.description === "" ? null : requiredText(input.description, "Deskripsi produk", 2, 1000);
+  if (input.description !== undefined) description = input.description === null || input.description === "" ? null : requiredText(input.description, "Deskripsi produk", 1, 1000);
   let available = current?.available ?? true;
   if (input.available !== undefined) {
     if (typeof input.available !== "boolean") invalid(["Ketersediaan produk harus berupa pilihan benar atau salah."]);
@@ -138,6 +139,7 @@ export async function createSellerProduct(sellerId: number, input: ProductMutati
     await saveAssignments(connection, Number(result.insertId), values.secondary);
     await connection.execute("UPDATE media SET used_at = COALESCE(used_at, NOW()) WHERE id = ? AND owner_type = 'SELLER' AND owner_id = ?", [values.mediaId, sellerId]);
     await connection.commit();
+    recordAuditSafely("SELLER", sellerId, "product_created", "PRODUCT", Number(result.insertId), { available: values.available });
     return await readProduct(sellerId, Number(result.insertId));
   } catch (error) {
     await connection.rollback();
@@ -160,6 +162,8 @@ export async function updateSellerProduct(sellerId: number, productIdValue: stri
     await saveAssignments(connection, productId, values.secondary);
     await connection.execute("UPDATE media SET used_at = COALESCE(used_at, NOW()) WHERE id = ? AND owner_type = 'SELLER' AND owner_id = ?", [values.mediaId, sellerId]);
     await connection.commit();
+    recordAuditSafely("SELLER", sellerId, "product_updated", "PRODUCT", productId);
+    if (current.available !== values.available) recordAuditSafely("SELLER", sellerId, "product_availability_changed", "PRODUCT", productId, { available: values.available });
     return await readProduct(sellerId, productId);
   } catch (error) {
     await connection.rollback();

@@ -49,7 +49,8 @@ export function validateText(input: unknown, label: string, min: number, max: nu
 
 export function validatePrice(input: unknown): string[] {
   if (typeof input !== "number" && typeof input !== "string") return ["Harga wajib diisi."];
-  const value = typeof input === "number" ? input : Number(input);
+  if (typeof input === "string" && !/^\d+$/.test(input.trim())) return ["Harga harus berupa bilangan bulat rupiah yang tidak negatif."];
+  const value = typeof input === "number" ? input : Number(input.trim());
   if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000_000_000) {
     return ["Harga harus berupa bilangan bulat rupiah yang tidak negatif."];
   }

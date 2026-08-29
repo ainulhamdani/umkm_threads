@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS locations (
   parent_code VARCHAR(20) NULL,
   dataset_version VARCHAR(80) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (code),
   KEY idx_locations_level_parent (level, parent_code),
   KEY idx_locations_level_parent_name (level, parent_code, name),
@@ -32,9 +33,10 @@ CREATE TABLE IF NOT EXISTS location_dataset_metadata (
   checksum_sha256 CHAR(64) NOT NULL,
   row_count INT UNSIGNED NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  active_key TINYINT GENERATED ALWAYS AS (IF(active = TRUE, 1, NULL)) STORED,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  KEY idx_location_metadata_active (active)
+  UNIQUE KEY uq_location_metadata_active (active_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS media (

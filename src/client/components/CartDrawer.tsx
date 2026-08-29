@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ApiError, createWhatsAppLink } from "../api";
+import { ApiError, createWhatsAppLink, trackEvent } from "../api";
 import { formatIdr, ui } from "../../shared/i18n";
 import type { ProductSummary } from "../../shared/types";
 
@@ -26,8 +26,10 @@ export function CartDrawer({ slug, shopName, lines, onClose, onRemove }: Props) 
     setError(null);
     try {
       const result = await createWhatsAppLink(slug, lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })), customerName.trim(), customerNote.trim());
+      trackEvent("whatsapp_link_generated", { resultCount: lines.length });
       window.location.href = result.whatsappUrl;
     } catch (reason) {
+      trackEvent("whatsapp_link_generation_failed");
       setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
       setSubmitting(false);
     }

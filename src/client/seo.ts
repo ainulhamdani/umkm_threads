@@ -8,6 +8,10 @@ export function setMeta(name: string, content: string, attribute: "name" | "prop
   element.content = content;
 }
 
+export function removeMeta(name: string, attribute: "name" | "property" = "name"): void {
+  document.head.querySelector<HTMLMetaElement>(`meta[${attribute}="${name}"]`)?.remove();
+}
+
 export function setCanonical(path: string): void {
   let element = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
   if (!element) {

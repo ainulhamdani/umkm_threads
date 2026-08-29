@@ -19,6 +19,7 @@ export function ShopForm({ shop, onSaved, onCancel }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(shop?.profileImageUrl ?? null);
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isSetup = shop === null;
 
@@ -33,9 +34,11 @@ export function ShopForm({ shop, onSaved, onCancel }: Props) {
       if (imageErrors.length > 0) { setError(imageErrors[0] ?? "Gambar tidak valid."); return; }
     }
     setBusy(true);
+    setStatus(file ? ui.uploading : ui.saving);
     try {
       let profileMediaId = values.profileMediaId;
       if (file) profileMediaId = (await uploadMedia(file, `Foto profil ${values.name}`)).id;
+      setStatus(ui.saving);
       const payload = { name: values.name, description: values.description || null, profileMediaId, provinceCode: values.provinceCode, cityRegencyCode: values.cityRegencyCode, districtCode: values.districtCode, addressDetail: values.addressDetail, ...(isSetup ? { slug: values.slug.toLowerCase().trim() } : {}) };
       const saved = isSetup ? await createSellerShop(payload) : await updateSellerShop(payload);
       onSaved(saved);
@@ -43,6 +46,7 @@ export function ShopForm({ shop, onSaved, onCancel }: Props) {
       setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }
 
@@ -56,6 +60,7 @@ export function ShopForm({ shop, onSaved, onCancel }: Props) {
       <div className="field"><label htmlFor="shop-profile">Foto profil toko</label><input id="shop-profile" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); setPreview(selected ? URL.createObjectURL(selected) : preview); }} /><span className="field-help">JPG, PNG, atau WebP, maksimal 5 MB.</span>{preview ? <img className="avatar" src={preview} alt="Pratinjau foto profil toko" /> : null}{values.profileMediaId && !file ? <button className="button button-text" type="button" onClick={() => { setValues({ ...values, profileMediaId: null }); setPreview(null); }}>Hapus foto profil</button> : null}</div>
       <LocationPicker value={values} onChange={setAddress} />
       <div className="field"><label htmlFor="shop-address">Detail alamat</label><textarea id="shop-address" value={values.addressDetail} maxLength={500} onChange={(event) => setValues({ ...values, addressDetail: event.target.value })} placeholder="Nama jalan, nomor, atau patokan" required /></div>
+      {status ? <div className="info-state" role="status" aria-live="polite">{status}</div> : null}
       {error ? <div className="form-error" role="alert">{error}</div> : null}
       <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}>{busy ? ui.loading : ui.save}</button>{onCancel ? <button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button> : null}</div>
     </form>

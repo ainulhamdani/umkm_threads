@@ -12,7 +12,7 @@ export class HttpError extends Error {
 export function json(data: unknown, status = 200, headers: HeadersInit = {}): Response {
   return Response.json(data, {
     status,
-    headers: { "cache-control": "no-store", ...headers },
+    headers: { "cache-control": "no-store", "content-language": "id-ID", ...headers },
   });
 }
 
@@ -29,7 +29,8 @@ export async function readJson(request: Request): Promise<Record<string, unknown
   try {
     body = await request.json();
   } catch (error) {
-    throw new HttpError(400, "INVALID_JSON", "Isi permintaan tidak dapat dibaca.", error instanceof Error ? error.message : undefined);
+    console.warn("Isi JSON tidak dapat dibaca.", error);
+    throw new HttpError(400, "INVALID_JSON", "Isi permintaan tidak dapat dibaca.");
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new HttpError(400, "INVALID_JSON", "Isi permintaan harus berupa objek JSON.");

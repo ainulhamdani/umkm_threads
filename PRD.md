@@ -5,7 +5,7 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP definition |
-| Version | 1.3 |
+| Version | 1.4 |
 | Date | 2026-08-29 |
 | Application language | Bahasa Indonesia (`id-ID`) |
 | Documentation language | English |

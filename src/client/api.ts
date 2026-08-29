@@ -11,13 +11,24 @@ function readCookie(name: string): string | null {
   return part ? decodeURIComponent(part.slice(name.length + 1)) : null;
 }
 
+let csrfRequest: Promise<string> | null = null;
+
 async function ensureCsrfToken(): Promise<string> {
   const existing = readCookie("threads_csrf");
   if (existing) return existing;
-  const response = await fetch("/api/csrf", { headers: { accept: "application/json" } });
-  if (!response.ok) throw new ApiError(response.status, "CSRF_FAILED", "Perlindungan keamanan tidak dapat disiapkan.");
-  const body = await response.json() as { token: string };
-  return body.token;
+  if (!csrfRequest) {
+    csrfRequest = fetch("/api/csrf", { headers: { accept: "application/json" } })
+      .then(async (response) => {
+        if (!response.ok) throw new ApiError(response.status, "CSRF_FAILED", "Perlindungan keamanan tidak dapat disiapkan.");
+        const body = await response.json() as { token: string };
+        return body.token;
+      })
+      .catch((error: unknown) => {
+        csrfRequest = null;
+        throw error;
+      });
+  }
+  return csrfRequest;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -53,6 +64,14 @@ export function getCategories(): Promise<{ items: ProductCategory[] }> {
 
 export function getAdPlacement(placement: "HOME" | "SHOP" | "SELLER" | "ADMIN"): Promise<{ enabled: boolean; clientId: string; slotId: string }> {
   return request(`/api/adsense?placement=${placement}`);
+}
+
+export function trackEvent(event: string, metadata: Record<string, string | number> = {}): void {
+  void request<{ success: boolean }>("/api/events", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ event, metadata }),
+  }).catch((reason: unknown) => console.warn("Aktivitas tidak dapat dicatat.", reason));
 }
 
 export function getShop(slug: string): Promise<PublicShop> {
