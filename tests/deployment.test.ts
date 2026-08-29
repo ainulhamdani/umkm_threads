@@ -4,6 +4,7 @@ const dockerfile = await Bun.file("Dockerfile").text();
 const dockerIgnore = await Bun.file(".dockerignore").text();
 const captainDefinition = JSON.parse(await Bun.file("captain-definition").text()) as { schemaVersion: number; dockerfilePath: string };
 const entrypoint = await Bun.file("docker-entrypoint.sh").text();
+const attributes = await Bun.file(".gitattributes").text();
 
 describe("CapRover deployment", () => {
   test("uses a pinned Bun multi-stage production image", () => {
@@ -23,6 +24,8 @@ describe("CapRover deployment", () => {
   test("runs migrations before serving the application", () => {
     expect(entrypoint).toContain("bun run db:migrate");
     expect(entrypoint).toContain("exec bun run server");
+    expect(entrypoint.startsWith("#!/bin/sh\n")).toBe(true);
+    expect(attributes).toContain("*.sh text eol=lf");
   });
 
   test("keeps database setup assets in the runtime image", () => {
