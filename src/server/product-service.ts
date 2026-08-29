@@ -64,7 +64,7 @@ async function secondaryCategories(productIds: number[]): Promise<Map<number, Se
   const placeholders = productIds.map(() => "?").join(", ");
   const [rows] = await db.execute<(SecondaryRow & { product_id: number })[]>(
     `SELECT a.product_id, a.category_code, pc.label, a.position FROM product_category_assignments a
-     JOIN product_categories pc ON pc.code = a.category_code WHERE a.product_id IN (${placeholders}) ORDER BY a.position ASC`,
+     JOIN product_categories pc ON pc.code = a.category_code AND pc.active = TRUE WHERE a.product_id IN (${placeholders}) ORDER BY a.position ASC`,
     productIds,
   );
   for (const row of rows) {
@@ -77,7 +77,7 @@ async function secondaryCategories(productIds: number[]): Promise<Map<number, Se
 
 const PRODUCT_SELECT = `SELECT p.id, p.shop_id, p.media_id, p.name, p.price_idr, p.description,
   p.primary_category_code, pc.label AS primary_category_label, p.available, p.visibility_status
-  FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code`;
+  FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code AND pc.active = TRUE`;
 
 export async function listSellerProducts(sellerId: number): Promise<SellerProduct[]> {
   const [rows] = await db.execute<ProductRow[]>(`${PRODUCT_SELECT} JOIN shops s ON s.id = p.shop_id WHERE s.seller_id = ? ORDER BY p.created_at DESC, p.id DESC`, [sellerId]);

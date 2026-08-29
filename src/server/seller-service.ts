@@ -71,8 +71,9 @@ async function findShop(sellerId: number): Promise<ShopRow | null> {
     `SELECT s.id, s.seller_id, s.name, s.slug, s.description, s.profile_media_id,
       s.province_code, province.name AS province_name, s.city_regency_code, city.name AS city_regency_name,
       s.district_code, district.name AS district_name, s.address_detail, s.visibility_status
-     FROM shops s JOIN locations province ON province.code = s.province_code
-     JOIN locations city ON city.code = s.city_regency_code JOIN locations district ON district.code = s.district_code
+     FROM shops s JOIN locations province ON province.code = s.province_code AND province.level = 'PROVINCE'
+     JOIN locations city ON city.code = s.city_regency_code AND city.level = 'CITY_REGENCY'
+     JOIN locations district ON district.code = s.district_code AND district.level = 'DISTRICT'
      WHERE s.seller_id = ? LIMIT 1`,
     [sellerId],
   );

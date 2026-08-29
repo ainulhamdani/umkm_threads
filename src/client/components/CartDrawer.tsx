@@ -26,7 +26,6 @@ export function CartDrawer({ slug, shopName, lines, onClose, onRemove }: Props) 
     setError(null);
     try {
       const result = await createWhatsAppLink(slug, lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })), customerName.trim(), customerNote.trim());
-      trackEvent("whatsapp_link_generated", { resultCount: lines.length });
       window.location.href = result.whatsappUrl;
     } catch (reason) {
       trackEvent("whatsapp_link_generation_failed");

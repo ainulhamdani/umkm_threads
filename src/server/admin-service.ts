@@ -49,7 +49,7 @@ export async function listAdminProducts(searchInput: unknown): Promise<unknown[]
   const [rows] = await db.execute<RowDataPacket[]>(
     `SELECT p.id, p.name, p.price_idr, p.available, p.visibility_status, p.shop_id, sh.name AS shop_name,
       pc.code AS primary_code, pc.label AS primary_label, p.media_id
-     FROM products p JOIN shops sh ON sh.id = p.shop_id JOIN product_categories pc ON pc.code = p.primary_category_code
+     FROM products p JOIN shops sh ON sh.id = p.shop_id JOIN product_categories pc ON pc.code = p.primary_category_code AND pc.active = TRUE
      WHERE (? = '' OR LOWER(p.name) LIKE ? OR LOWER(sh.name) LIKE ?) ORDER BY p.created_at DESC, p.id DESC LIMIT 200`,
     [search, like, like],
   );

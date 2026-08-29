@@ -165,7 +165,7 @@ async function getProductRows(shopIds: number[], search: ShopSearchParams, limit
   const conditions = productConditions(search);
   const [rows] = await db.execute<ProductRow[]>(
     `SELECT p.id, p.shop_id, p.name, p.price_idr, p.description, p.media_id, p.primary_category_code, p.available, pc.label AS primary_category_label
-     FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code
+     FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code AND pc.active = TRUE
      WHERE p.shop_id IN (${placeholders}) AND ${conditions.sql.join(" AND ")}
      ORDER BY p.created_at DESC, p.id DESC`,
     [...shopIds, ...conditions.params],
@@ -176,7 +176,7 @@ async function getProductRows(shopIds: number[], search: ShopSearchParams, limit
     const productPlaceholders = productIds.map(() => "?").join(", ");
     const [secondaryRows] = await db.execute<SecondaryRow[]>(
       `SELECT a.product_id, a.category_code, pc.label, a.position
-       FROM product_category_assignments a JOIN product_categories pc ON pc.code = a.category_code
+       FROM product_category_assignments a JOIN product_categories pc ON pc.code = a.category_code AND pc.active = TRUE
        WHERE a.product_id IN (${productPlaceholders}) ORDER BY a.position ASC`,
       productIds,
     );
@@ -200,9 +200,9 @@ const SHOP_SELECT = `SELECT s.id, s.name, s.slug, s.description, s.profile_media
   s.province_code, province.name AS province_name, s.city_regency_code, city.name AS city_regency_name,
   s.district_code, district.name AS district_name
   FROM shops s JOIN sellers se ON se.id = s.seller_id
-  JOIN locations province ON province.code = s.province_code
-  JOIN locations city ON city.code = s.city_regency_code
-  JOIN locations district ON district.code = s.district_code`;
+  JOIN locations province ON province.code = s.province_code AND province.level = 'PROVINCE' AND province.active = TRUE
+  JOIN locations city ON city.code = s.city_regency_code AND city.level = 'CITY_REGENCY' AND city.active = TRUE
+  JOIN locations district ON district.code = s.district_code AND district.level = 'DISTRICT' AND district.active = TRUE`;
 
 export async function listPublicShops(search: ShopSearchParams): Promise<ShopSearchResponse> {
   await validatePublicSearch(search);
@@ -259,7 +259,7 @@ export async function createWhatsAppLink(slug: string, items: WhatsAppItemInput[
   const placeholders = normalized.map(() => "?").join(", ");
   const [rows] = await db.execute<ProductRow[]>(
     `SELECT p.id, p.shop_id, p.name, p.price_idr, p.description, p.media_id, p.primary_category_code, p.available, pc.label AS primary_category_label
-     FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code
+     FROM products p JOIN product_categories pc ON pc.code = p.primary_category_code AND pc.active = TRUE
      WHERE p.shop_id = ? AND p.id IN (${placeholders}) AND p.available = TRUE AND p.visibility_status = 'PUBLISHED'`,
     [shop.id, ...normalized.map((item) => item.productId)],
   );
