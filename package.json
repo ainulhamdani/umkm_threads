@@ -12,6 +12,7 @@
     "test": "bun test",
     "db:migrate": "bun scripts/migrate.ts",
     "db:seed": "bun scripts/seed.ts",
+    "verify:http": "bun scripts/verify-http.ts",
     "locations:download": "bun scripts/download-locations.ts"
   },
   "dependencies": {
