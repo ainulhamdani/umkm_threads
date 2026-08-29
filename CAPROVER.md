@@ -4,6 +4,8 @@ This repository deploys as a multi-stage Bun image through the root-level `capta
 
 The image uses the pinned official `oven/bun:1.4.0-slim` image. It contains production dependencies only, runs as the non-root `bun` user, and keeps the migration and seed scripts available for release setup.
 
+Every container start runs `bun run db:migrate` before the web server. If migration fails, the container exits and does not serve traffic.
+
 ## CapRover app configuration
 
 Create one CapRover app and deploy the repository. CapRover should use the root `captain-definition` file.
@@ -34,14 +36,15 @@ In CapRover App Details, add `/data/uploads` as a persistent directory. Without 
 
 The MySQL account must be able to create the `threads_shop` database during migration, or the database must be created before running the migration. Use a dedicated application user for production rather than the MySQL root account.
 
-After the first deployment, open the CapRover app console or execute the commands inside the running container:
+After the first deployment, open the CapRover app console or execute the seed command inside the running container:
 
 ```sh
-bun run db:migrate
 SUPERADMIN_EMAIL=admin@example.com SUPERADMIN_PASSWORD='replace-with-a-strong-password' bun run db:seed
 ```
 
-Remove the temporary seed credentials from the shell and from CapRover environment variables after seeding. Run `bun run db:migrate` once for every later schema release before directing traffic to the new application version.
+Remove the temporary seed credentials from the shell and from CapRover environment variables after seeding. The entrypoint handles `bun run db:migrate` automatically for later schema releases.
+
+The migration entrypoint runs automatically for every container start, including later deployments and restarts. Keep the app at one instance during deployments so schema changes are not applied concurrently. Each migration must remain backward-compatible with the running application during the CapRover replacement window.
 
 ## Local image checks
 
@@ -57,5 +60,6 @@ The application health endpoint is `GET /health`. The local container still need
 ## Relevant files
 
 - `Dockerfile`: dependency, build, and production stages.
+- `docker-entrypoint.sh`: runs the database migration before starting the server.
 - `.dockerignore`: excludes secrets, local uploads, dependencies, tests, and generated client assets from the build context.
 - `captain-definition`: tells CapRover to use the repository Dockerfile.

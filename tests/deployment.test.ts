@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 const dockerfile = await Bun.file("Dockerfile").text();
 const dockerIgnore = await Bun.file(".dockerignore").text();
 const captainDefinition = JSON.parse(await Bun.file("captain-definition").text()) as { schemaVersion: number; dockerfilePath: string };
+const entrypoint = await Bun.file("docker-entrypoint.sh").text();
 
 describe("CapRover deployment", () => {
   test("uses a pinned Bun multi-stage production image", () => {
@@ -16,7 +17,12 @@ describe("CapRover deployment", () => {
     expect(dockerfile).toContain("ENV UPLOAD_DIR=/data/uploads");
     expect(dockerfile).toContain("USER bun");
     expect(dockerfile).toContain("EXPOSE 80");
-    expect(dockerfile).toContain('CMD ["bun", "run", "server"]');
+    expect(dockerfile).toContain('ENTRYPOINT ["/app/docker-entrypoint.sh"]');
+  });
+
+  test("runs migrations before serving the application", () => {
+    expect(entrypoint).toContain("bun run db:migrate");
+    expect(entrypoint).toContain("exec bun run server");
   });
 
   test("keeps database setup assets in the runtime image", () => {
