@@ -41,6 +41,7 @@ a { color: var(--md-primary); }
 .hero { display: grid; gap: 12px; padding: 24px 0 20px; }
 .hero h1, .section-heading h2 { margin: 0; color: var(--md-on-primary-container); letter-spacing: -0.025em; }
 .hero p { max-width: 680px; margin: 0; color: #49454f; line-height: 1.6; }
+.eyebrow { margin: 0; color: var(--md-primary); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 28px 0 16px; }
 .section-heading p { margin: 0; color: var(--md-outline); }
 
@@ -64,7 +65,13 @@ a { color: var(--md-primary); }
 .field-error, .form-error { color: var(--md-error); font-size: 0.875rem; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
-.filter-panel { display: grid; gap: 16px; padding: 16px; border: 1px solid var(--md-outline-variant); border-radius: 24px; background: var(--md-surface-container); }
+.filter-panel { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--md-outline-variant); border-radius: 24px; background: var(--md-surface-container); }
+.filter-scroll { overflow-x: auto; padding: 4px; overscroll-behavior-inline: contain; scrollbar-color: var(--md-outline-variant) transparent; }
+.filter-row { display: flex; align-items: end; gap: 12px; min-width: max-content; }
+.filter-row .field { margin: 0; }
+.filter-search-field { flex: 0 0 320px; }
+.filter-field, .location-filter-row .field { flex: 0 0 220px; }
+.location-filter-row { display: flex; gap: 12px; flex: 0 0 auto; }
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .shop-grid { display: grid; gap: 16px; }
 .shop-card { display: grid; gap: 16px; overflow: hidden; border: 1px solid var(--md-outline-variant); border-radius: 24px; background: #ffffff; box-shadow: var(--md-shadow); }
@@ -112,6 +119,17 @@ a { color: var(--md-primary); }
 .cart-summary { display: flex; justify-content: space-between; gap: 16px; font-weight: 800; }
 
 .dashboard-grid { display: grid; gap: 20px; }
+.seller-hero { padding-bottom: 12px; }
+.seller-nav { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 20px; padding: 6px; border: 1px solid var(--md-outline-variant); border-radius: 20px; background: var(--md-surface-container); scrollbar-color: var(--md-outline-variant) transparent; }
+.seller-nav a { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 48px; border-radius: 999px; padding: 0 16px; color: var(--md-on-secondary-container); text-decoration: none; font-weight: 700; white-space: nowrap; }
+.seller-nav a.active { background: var(--md-primary); color: var(--md-on-primary); }
+.seller-content { display: grid; gap: 20px; max-width: 800px; }
+.seller-overview-card { display: grid; gap: 16px; }
+.seller-overview-card h2 { margin: 0 0 6px; color: var(--md-on-primary-container); }
+.seller-stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.seller-stat-card { display: grid; gap: 4px; padding: 18px; border: 1px solid var(--md-outline-variant); border-radius: 20px; background: #ffffff; }
+.seller-stat-card strong { color: var(--md-on-primary-container); font-size: 1.75rem; line-height: 1; }
+.seller-stat-card span { color: var(--md-outline); font-size: 0.875rem; }
 .data-list { display: grid; gap: 12px; }
 .data-row { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--md-outline-variant); border-radius: 20px; background: #ffffff; }
 .status-badge { display: inline-flex; width: fit-content; min-height: 28px; align-items: center; border-radius: 999px; padding: 0 10px; background: var(--md-secondary-container); color: var(--md-on-secondary-container); font-size: 0.75rem; font-weight: 700; }
@@ -128,6 +146,8 @@ a { color: var(--md-primary); }
 }
 
 @media (min-width: 1024px) {
+  .filter-field, .location-filter-row .field { flex-basis: 190px; }
+  .filter-search-field { flex-basis: 280px; }
   .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-grid { grid-template-columns: minmax(0, 1fr) minmax(320px, 0.6fr); align-items: start; }

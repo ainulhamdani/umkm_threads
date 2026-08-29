@@ -26,7 +26,7 @@ function LocationSelect({ label, value, options, disabled, loading = false, onCh
 
 export function LocationFilters({ filters, provinces, cities, districts, onProvinceChange, onCityChange, onDistrictChange, loading = { provinces: false, cities: false, districts: false } }: Props) {
   return (
-    <div className="field-grid">
+    <div className="location-filter-row">
       <LocationSelect label={ui.province} value={filters.provinceCode ?? ""} options={provinces} loading={loading.provinces} onChange={onProvinceChange} />
       <LocationSelect label={ui.cityRegency} value={filters.cityRegencyCode ?? ""} options={cities} disabled={!filters.provinceCode} loading={loading.cities} onChange={onCityChange} />
       <LocationSelect label={ui.district} value={filters.districtCode ?? ""} options={districts} disabled={!filters.cityRegencyCode} loading={loading.districts} onChange={onDistrictChange} />

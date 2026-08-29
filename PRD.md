@@ -147,6 +147,7 @@ The seller must be able to:
 - Register with a unique phone number and a six-digit numeric PIN.
 - Log in with the registered phone number and PIN.
 - Log out from the seller dashboard.
+- Use separate seller pages for the overview, shop profile, products, phone number, and PIN forms so that each page has one focused management task.
 - Complete shop setup after registration.
 - Change the account phone number while authenticated by confirming the current PIN. The new phone number must be unique, and changing it invalidates existing sessions.
 

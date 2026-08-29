@@ -103,6 +103,8 @@ There is no public customer account and no seller self-service superadmin regist
 | `/seller/dashboard` | Seller | Seller overview and shop state. |
 | `/seller/shop` | Seller | Shop profile setup and permitted edits. |
 | `/seller/products` | Seller | Product creation, editing, and availability management. |
+| `/seller/phone` | Seller | Seller phone and WhatsApp number update. |
+| `/seller/pin` | Seller | Seller PIN update and account security. |
 | `/admin/login` | Public | Superadmin login. |
 | `/admin` | Superadmin | Moderation, seller support, and AdSense configuration. |
 | `/robots.txt` | Public | Search crawler rules. |
@@ -199,6 +201,8 @@ The dashboard must show:
 - A logout action.
 
 Seller routes must redirect unauthenticated visitors to `/seller/login`.
+
+The seller experience uses one focused form per page. `/seller/dashboard` is an overview without an edit form, `/seller/shop` contains only the shop profile form, `/seller/products` contains product management, `/seller/phone` contains only the phone-change form, and `/seller/pin` contains only the PIN-change form. The initial `/seller/setup` route contains only the first shop setup form. Seller navigation remains horizontally scrollable on small screens.
 
 ### 5.6 Shop setup and editing
 

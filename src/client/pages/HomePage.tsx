@@ -107,32 +107,34 @@ export function HomePage() {
         <p>Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
       </section>
       <section className="filter-panel" aria-label="Pencarian dan filter toko">
-        <form onSubmit={submitSearch}>
-          <div className="field">
-            <label htmlFor="product-search">{ui.searchPlaceholder}</label>
-            <input id="product-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={ui.searchPlaceholder} />
-          </div>
-          <div className="filter-actions">
-            <button className="button button-primary" type="submit">{ui.search}</button>
-            {hasFilters ? <button className="button button-text" type="button" onClick={clearFilters}>{ui.clearFilters}</button> : null}
-          </div>
-        </form>
-        <LocationFilters
-          filters={filters}
-          provinces={provinces}
-          cities={cities}
-          districts={districts}
-          onProvinceChange={(value) => applyFilter({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
-          onCityChange={(value) => applyFilter({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
-          onDistrictChange={(value) => applyFilter({ ...filters, districtCode: value || undefined })}
-          loading={locationLoading}
-        />
-        <div className="field">
-          <label htmlFor="product-category">{ui.category}</label>
-          <select id="product-category" value={filters.categoryCode ?? ""} disabled={categoriesLoading} aria-busy={categoriesLoading} onChange={(event) => applyFilter({ ...filters, categoryCode: event.target.value || undefined })}>
-            <option value="">{categoriesLoading ? "Memuat kategori..." : ui.allCategories}</option>
-            {categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
-          </select>
+        <div className="filter-scroll">
+          <form className="filter-row" onSubmit={submitSearch}>
+            <div className="field filter-search-field">
+              <label htmlFor="product-search">{ui.searchPlaceholder}</label>
+              <input id="product-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={ui.searchPlaceholder} />
+            </div>
+            <div className="filter-actions">
+              <button className="button button-primary" type="submit">{ui.search}</button>
+            </div>
+            <LocationFilters
+              filters={filters}
+              provinces={provinces}
+              cities={cities}
+              districts={districts}
+              onProvinceChange={(value) => applyFilter({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
+              onCityChange={(value) => applyFilter({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
+              onDistrictChange={(value) => applyFilter({ ...filters, districtCode: value || undefined })}
+              loading={locationLoading}
+            />
+            <div className="field filter-field">
+              <label htmlFor="product-category">{ui.category}</label>
+              <select id="product-category" value={filters.categoryCode ?? ""} disabled={categoriesLoading} aria-busy={categoriesLoading} onChange={(event) => applyFilter({ ...filters, categoryCode: event.target.value || undefined })}>
+                <option value="">{categoriesLoading ? "Memuat kategori..." : ui.allCategories}</option>
+                {categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
+              </select>
+            </div>
+            {hasFilters ? <div className="filter-actions"><button className="button button-text" type="button" onClick={clearFilters}>{ui.clearFilters}</button></div> : null}
+          </form>
         </div>
       </section>
       <AdsenseSlot placement="HOME" />

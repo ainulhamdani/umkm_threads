@@ -76,6 +76,6 @@ export function App() {
     setCanonical(path === "/" ? "/" : path);
   }, [path]);
 
-  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/seller/shop" ? <SellerDashboardPage section="shop" /> : path === "/seller/products" ? <SellerDashboardPage section="products" /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <><NotFound /><AdsenseSlot placement="HOME" /></>;
+  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/seller/shop" ? <SellerDashboardPage section="shop" /> : path === "/seller/products" ? <SellerDashboardPage section="products" /> : path === "/seller/phone" ? <SellerDashboardPage section="phone" /> : path === "/seller/pin" ? <SellerDashboardPage section="pin" /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <><NotFound /><AdsenseSlot placement="HOME" /></>;
   return <AppShell>{content}</AppShell>;
 }

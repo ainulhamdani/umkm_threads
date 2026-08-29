@@ -12,7 +12,7 @@ import { RESERVED_SHOP_SLUGS } from "../shared/validation";
 const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
-const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/admin/login", "/admin"]);
+const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/seller/phone", "/seller/pin", "/admin/login", "/admin"]);
 
 function xmlEscape(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
