@@ -5,6 +5,7 @@ const result = await Bun.build({
   target: "browser",
   minify: false,
   sourcemap: "external",
+  define: { "process.env.NODE_ENV": JSON.stringify("production") },
 });
 
 if (!result.success) {
