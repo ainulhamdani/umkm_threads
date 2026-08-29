@@ -1,0 +1,28 @@
+{
+  "name": "threads-umkm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run build:client && bun run server",
+    "build:client": "bun scripts/build-client.ts",
+    "server": "bun src/server/index.ts",
+    "start": "bun run build:client && bun run server",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "db:migrate": "bun scripts/migrate.ts",
+    "db:seed": "bun scripts/seed.ts",
+    "locations:download": "bun scripts/download-locations.ts"
+  },
+  "dependencies": {
+    "mysql2": "^3.14.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.9.2"
+  }
+}
