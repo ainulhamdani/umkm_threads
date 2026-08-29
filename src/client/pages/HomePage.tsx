@@ -3,6 +3,7 @@ import { ApiError, getCategories, getLocations, listShops, trackEvent } from "..
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { LocationFilters } from "../components/LocationFilters";
 import { ShopCard } from "../components/ShopCard";
+import { Icon } from "../components/Icon";
 import { ui } from "../../shared/i18n";
 import type { LocationOption, ProductCategory, ShopSearchParams, ShopSearchResponse } from "../../shared/types";
 
@@ -102,41 +103,43 @@ export function HomePage() {
   }, [loading, result, hasFilters]);
   return (
     <>
-      <section className="grid gap-3 rounded-3xl bg-brand-100 px-6 py-8 sm:px-8 sm:py-10">
+      <section className="home-hero">
         <p className="eyebrow">Katalog toko lokal Indonesia</p>
-        <h1 className="m-0 max-w-3xl text-3xl font-extrabold tracking-tight text-brand-900 sm:text-5xl">Temukan toko lokal di sekitar Anda</h1>
-        <p className="m-0 max-w-2xl text-base leading-7 text-[#49454f]">Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
+        <h1>Temukan toko lokal di sekitar Anda</h1>
+        <p>Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
       </section>
-      <section className="filter-panel shadow-sm" aria-label="Pencarian dan filter toko">
-        <div className="filter-scroll">
-          <form className="filter-row" onSubmit={submitSearch}>
+      <section className="filter-panel" aria-label="Pencarian dan filter toko">
+        <form className="home-filter-form" onSubmit={submitSearch}>
+          <div className="home-search-row">
             <div className="field filter-search-field">
               <label htmlFor="product-search">{ui.searchPlaceholder}</label>
               <input id="product-search" type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder={ui.searchPlaceholder} />
             </div>
-            <div className="filter-actions">
-              <button className="button button-primary" type="submit">{ui.search}</button>
+            <button className="button button-primary filter-search-action" type="submit"><Icon name="search" size={18} /><span>{ui.search}</span></button>
+          </div>
+          <div className="filter-scroll">
+            <div className="filter-row">
+              <LocationFilters
+                filters={filters}
+                provinces={provinces}
+                cities={cities}
+                districts={districts}
+                onProvinceChange={(value) => applyFilter({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
+                onCityChange={(value) => applyFilter({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
+                onDistrictChange={(value) => applyFilter({ ...filters, districtCode: value || undefined })}
+                loading={locationLoading}
+              />
+              <div className="field filter-field">
+                <label htmlFor="product-category">{ui.category}</label>
+                <select id="product-category" value={filters.categoryCode ?? ""} disabled={categoriesLoading} aria-busy={categoriesLoading} onChange={(event) => applyFilter({ ...filters, categoryCode: event.target.value || undefined })}>
+                  <option value="">{categoriesLoading ? "Memuat kategori..." : ui.allCategories}</option>
+                  {categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
+                </select>
+              </div>
+              {hasFilters ? <div className="filter-actions"><button className="button button-text" type="button" onClick={clearFilters}>{ui.clearFilters}</button></div> : null}
             </div>
-            <LocationFilters
-              filters={filters}
-              provinces={provinces}
-              cities={cities}
-              districts={districts}
-              onProvinceChange={(value) => applyFilter({ ...filters, provinceCode: value || undefined, cityRegencyCode: undefined, districtCode: undefined })}
-              onCityChange={(value) => applyFilter({ ...filters, cityRegencyCode: value || undefined, districtCode: undefined })}
-              onDistrictChange={(value) => applyFilter({ ...filters, districtCode: value || undefined })}
-              loading={locationLoading}
-            />
-            <div className="field filter-field">
-              <label htmlFor="product-category">{ui.category}</label>
-              <select id="product-category" value={filters.categoryCode ?? ""} disabled={categoriesLoading} aria-busy={categoriesLoading} onChange={(event) => applyFilter({ ...filters, categoryCode: event.target.value || undefined })}>
-                <option value="">{categoriesLoading ? "Memuat kategori..." : ui.allCategories}</option>
-                {categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
-              </select>
-            </div>
-            {hasFilters ? <div className="filter-actions"><button className="button button-text" type="button" onClick={clearFilters}>{ui.clearFilters}</button></div> : null}
-          </form>
-        </div>
+          </div>
+        </form>
       </section>
       <AdsenseSlot placement="HOME" />
       <section aria-labelledby="shop-list-heading">

@@ -1,5 +1,6 @@
 import { formatIdr, ui } from "../../shared/i18n";
 import type { ProductSummary, ShopSearchItem } from "../../shared/types";
+import { Icon } from "./Icon";
 
 function locationText(item: ShopSearchItem): string {
   const address = item.shop.address;
@@ -21,19 +22,22 @@ export function ShopCard({ item }: { item: ShopSearchItem }) {
   return (
     <article className="shop-card">
       <div className="shop-card-body">
-        <div className="shop-card-header">
-          {shop.profileImageUrl ? <img className="avatar" src={shop.profileImageUrl} alt={`Foto profil ${shop.name}`} loading="lazy" /> : <div className="avatar avatar-placeholder" aria-hidden="true">{initial}</div>}
-          <div>
-            <h3>{shop.name}</h3>
-            <p className="shop-location">{locationText(item)}</p>
+        <div className="shop-card-top">
+          <div className="shop-card-header">
+            {shop.profileImageUrl ? <img className="avatar" src={shop.profileImageUrl} alt={`Foto profil ${shop.name}`} loading="lazy" /> : <div className="avatar avatar-placeholder" aria-hidden="true">{initial}</div>}
+            <div>
+              <h3>{shop.name}</h3>
+              <p className="shop-location">{locationText(item)}</p>
+            </div>
           </div>
+          <a className="shop-card-link" href={`/${shop.slug}`} data-nav="true" aria-label={`${ui.viewShop}: ${shop.name}`}><Icon name="external" size={17} /></a>
         </div>
         <p className="shop-address">{shop.address.addressDetail}</p>
         <div className="product-preview-grid">
           {matchingProducts.slice(0, 4).map((product) => <Preview key={product.id} product={product} />)}
         </div>
         <div className="card-actions">
-          <a className="button button-primary" href={`/${shop.slug}`} data-nav="true">{ui.viewShop}</a>
+          <a className="button button-secondary" href={`/${shop.slug}`} data-nav="true"><Icon name="external" size={17} />{ui.viewShop}</a>
         </div>
       </div>
     </article>

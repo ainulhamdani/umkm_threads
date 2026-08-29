@@ -3,7 +3,8 @@ import { ApiError, getShop, trackEvent } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { CartDrawer, type CartLine } from "../components/CartDrawer";
 import { ProductCard } from "../components/ProductCard";
-import { ui } from "../../shared/i18n";
+import { Icon } from "../components/Icon";
+import { formatIdr, ui } from "../../shared/i18n";
 import type { ProductSummary, PublicShop } from "../../shared/types";
 import { removeMeta, setCanonical, setMeta } from "../seo";
 
@@ -122,9 +123,20 @@ export function ShopPage({ slug }: { slug: string }) {
     setCart((current) => current ? { ...current, lines: current.lines.filter((line) => line.product.id !== productId) } : current);
   }
 
+  async function shareShop() {
+    const shareData = { title: shop?.name ?? ui.appName, url: window.location.href };
+    if (navigator.share) {
+      await navigator.share(shareData).catch((reason: unknown) => console.warn("Berbagi toko dibatalkan.", reason));
+      return;
+    }
+    if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href).catch((reason: unknown) => console.warn("Tautan toko tidak dapat disalin.", reason));
+  }
+
   if (error) return <div className="error-state" role="alert"><h1>{error.includes("tidak ditemukan") ? "Toko tidak ditemukan" : "Toko belum dapat dimuat"}</h1><p>{error}</p><a href="/" data-nav="true">Kembali ke beranda</a></div>;
   if (!shop) return <div className="loading-state" aria-live="polite">{ui.loading}</div>;
   const initial = shop.name.trim().charAt(0).toUpperCase() || "T";
+  const cartCount = cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
+  const cartSubtotal = cart?.lines.reduce((sum, line) => sum + line.product.priceIdr * line.quantity, 0) ?? 0;
   return (
     <>
       <section className="shop-hero">
@@ -134,14 +146,15 @@ export function ShopPage({ slug }: { slug: string }) {
         </div>
         <p className="shop-address">{shop.address.addressDetail}</p>
         {shop.description ? <p>{shop.description}</p> : null}
-        <p className="muted">Nomor WhatsApp: {shop.phone}</p>
-        <div className="card-actions"><a className="button button-text" href="/" data-nav="true">{ui.home}</a><button className="button button-primary" type="button" onClick={() => setCartOpen(true)}>{ui.cart} ({cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0})</button></div>
+        <div className="shop-phone"><Icon name="phone" size={16} />Nomor WhatsApp: {shop.phone}</div>
+        <div className="card-actions"><a className="button button-text" href="/" data-nav="true"><Icon name="home" size={17} />{ui.home}</a><button className="button button-secondary" type="button" onClick={() => void shareShop()}><Icon name="share" size={17} />Bagikan toko</button><button className="button button-primary" type="button" onClick={() => setCartOpen(true)}><Icon name="cart" size={17} />{ui.cart} ({cartCount})</button></div>
       </section>
       <AdsenseSlot placement="SHOP" />
       <section aria-labelledby="product-list-heading">
         <div className="section-heading"><h2 id="product-list-heading">{ui.products}</h2></div>
         {shop.products.length === 0 ? <div className="empty-state">{ui.noProducts}</div> : <div className="product-grid">{shop.products.map((product) => <ProductCard key={product.id} product={product} quantity={quantityByProduct.get(product.id) ?? 0} onChange={(quantity) => changeQuantity(product, quantity)} />)}</div>}
       </section>
+      {cartCount > 0 && cart ? <button className="cart-floating" type="button" onClick={() => setCartOpen(true)}><span className="cart-floating-icon"><Icon name="cart" size={21} /></span><span><strong>{ui.cart}</strong><span>{cartCount} produk</span></span><strong>{formatIdr(cartSubtotal)}</strong><Icon name="arrow-right" size={18} /></button> : null}
       {cartOpen && cart ? <CartDrawer slug={cart.shopSlug} shopName={cart.shopName} lines={cart.lines} onClose={() => setCartOpen(false)} onRemove={removeProduct} /> : null}
     </>
   );

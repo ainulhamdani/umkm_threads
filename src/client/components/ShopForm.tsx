@@ -3,6 +3,7 @@ import { ApiError, createSellerShop, updateSellerShop, uploadMedia, type SellerS
 import { LocationPicker, type AddressValues } from "./LocationPicker";
 import { ui } from "../../shared/i18n";
 import { validateImageFile } from "../../shared/validation";
+import { Icon } from "./Icon";
 
 type Props = { shop: SellerShop | null; onSaved: (shop: SellerShop) => void; onCancel?: () => void };
 type FormValues = AddressValues & { name: string; slug: string; description: string; addressDetail: string; profileMediaId: number | null };
@@ -52,17 +53,17 @@ export function ShopForm({ shop, onSaved, onCancel }: Props) {
 
   function setAddress(address: AddressValues) { setValues((current) => ({ ...current, ...address })); }
   return (
-    <form className="form-card" onSubmit={submit}>
-      <h2>{isSetup ? "Buat profil toko" : "Edit profil toko"}</h2>
+    <form className="form-card shop-form-card" onSubmit={submit}>
+      <div className="form-card-heading"><div><p className="eyebrow">Informasi toko</p><h2>{isSetup ? "Buat profil toko" : "Edit profil toko"}</h2></div>{!isSetup ? <span className="saved-badge"><Icon name="check" size={15} />Tersimpan</span> : null}</div>
+      <div className="upload-field"><div className="upload-preview">{preview ? <img src={preview} alt="Pratinjau foto profil toko" /> : <Icon name="store" size={30} />}</div><div className="upload-copy"><strong>Foto profil toko</strong><span className="field-help">Gunakan foto yang mewakili toko Anda.</span><label className="button button-secondary" htmlFor="shop-profile"><Icon name="image" size={16} />{preview ? "Ubah foto" : "Pilih foto"}</label>{values.profileMediaId && !file ? <button className="button button-text" type="button" onClick={() => { setValues({ ...values, profileMediaId: null }); setPreview(null); }}>Hapus foto</button> : null}</div><input className="file-input" id="shop-profile" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); setPreview(selected ? URL.createObjectURL(selected) : preview); }} /><span className="field-help">JPG, PNG, atau WebP, maksimal 5 MB.</span></div>
       <div className="field"><label htmlFor="shop-name">Nama toko</label><input id="shop-name" value={values.name} maxLength={120} onChange={(event) => setValues({ ...values, name: event.target.value })} required /></div>
-      <div className="field"><label htmlFor="shop-slug">URL toko</label><input id="shop-slug" value={values.slug} readOnly={!isSetup} onChange={(event) => setValues({ ...values, slug: event.target.value.toLowerCase().replace(/\s+/g, "-") })} placeholder="nama-toko" required /><span className="field-help">{isSetup ? "URL ini tidak dapat diubah setelah toko dibuat." : `Katalog: /${values.slug}`}</span></div>
+      <div className="field"><label htmlFor="shop-slug">URL toko</label><div className="input-with-icon"><input id="shop-slug" value={values.slug} readOnly={!isSetup} onChange={(event) => setValues({ ...values, slug: event.target.value.toLowerCase().replace(/\s+/g, "-") })} placeholder="nama-toko" required /><Icon name="lock" size={17} /></div><span className="field-help">{isSetup ? "URL ini tidak dapat diubah setelah toko dibuat." : `Katalog: /${values.slug}`}</span></div>
       <div className="field"><label htmlFor="shop-description">Deskripsi toko (opsional)</label><textarea id="shop-description" value={values.description} maxLength={500} onChange={(event) => setValues({ ...values, description: event.target.value })} /></div>
-      <div className="field"><label htmlFor="shop-profile">Foto profil toko</label><input id="shop-profile" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); setPreview(selected ? URL.createObjectURL(selected) : preview); }} /><span className="field-help">JPG, PNG, atau WebP, maksimal 5 MB.</span>{preview ? <img className="avatar" src={preview} alt="Pratinjau foto profil toko" /> : null}{values.profileMediaId && !file ? <button className="button button-text" type="button" onClick={() => { setValues({ ...values, profileMediaId: null }); setPreview(null); }}>Hapus foto profil</button> : null}</div>
       <LocationPicker value={values} onChange={setAddress} />
       <div className="field"><label htmlFor="shop-address">Detail alamat</label><textarea id="shop-address" value={values.addressDetail} maxLength={500} onChange={(event) => setValues({ ...values, addressDetail: event.target.value })} placeholder="Nama jalan, nomor, atau patokan" required /></div>
       {status ? <div className="info-state" role="status" aria-live="polite">{status}</div> : null}
       {error ? <div className="form-error" role="alert">{error}</div> : null}
-      <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}>{busy ? ui.loading : ui.save}</button>{onCancel ? <button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button> : null}</div>
+      <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}><Icon name="check" size={17} />{busy ? ui.loading : isSetup ? "Simpan profil toko" : "Simpan perubahan"}</button>{onCancel ? <button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button> : null}</div>
     </form>
   );
 }

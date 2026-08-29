@@ -3,6 +3,7 @@ import { ApiError, createSellerProduct, updateSellerProduct, uploadMedia } from 
 import { formatIdr, ui } from "../../shared/i18n";
 import type { ProductCategory, SellerProduct } from "../../shared/types";
 import { validateImageFile } from "../../shared/validation";
+import { Icon } from "./Icon";
 
 type Props = { categories: ProductCategory[]; product: SellerProduct | null; onSaved: (product: SellerProduct) => void; onCancel: () => void };
 
@@ -55,18 +56,18 @@ export function ProductForm({ categories, product, onSaved, onCancel }: Props) {
   }
 
   return (
-    <form className="form-card" onSubmit={submit}>
-      <h2>{product ? "Edit produk" : "Tambah produk"}</h2>
+    <form className="form-card product-form-card" onSubmit={submit}>
+      <div className="form-card-heading"><div><p className="eyebrow">Katalog produk</p><h2>{product ? "Edit produk" : "Tambah produk"}</h2></div><span className="form-step">1 / 1</span></div>
       <div className="field"><label htmlFor="product-name">Nama produk</label><input id="product-name" value={name} maxLength={160} onChange={(event) => setName(event.target.value)} required /></div>
       <div className="field"><label htmlFor="product-price">Harga (Rupiah)</label><input id="product-price" type="number" min="0" step="1" value={price} onChange={(event) => setPrice(event.target.value)} required /><span className="field-help">Contoh: {formatIdr(25000)}.</span></div>
-      <div className="field"><label htmlFor="product-image">Foto produk</label><input id="product-image" type="file" accept="image/jpeg,image/png,image/webp" required={!product} onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); if (selected) setPreview(URL.createObjectURL(selected)); }} /><span className="field-help">JPG, PNG, atau WebP, maksimal 5 MB.</span>{preview ? <img className="product-form-preview" src={preview} alt={`Pratinjau foto ${name || "produk"}`} /> : null}</div>
+      <div className="field"><label htmlFor="product-image">Foto produk</label><div className="product-upload-box"><div className="product-upload-preview">{preview ? <img src={preview} alt={`Pratinjau foto ${name || "produk"}`} /> : <Icon name="image" size={28} />}</div><div className="product-upload-copy"><strong>{preview ? "Foto produk siap" : "Tambahkan foto produk"}</strong><span className="field-help">JPG, PNG, atau WebP, maksimal 5 MB.</span><label className="button button-secondary" htmlFor="product-image"><Icon name="image" size={16} />{preview ? "Ganti foto" : "Pilih foto"}</label></div><input className="file-input" id="product-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const selected = event.target.files?.[0] ?? null; setFile(selected); if (selected) setPreview(URL.createObjectURL(selected)); }} /></div></div>
       <div className="field"><label htmlFor="product-primary">Kategori utama</label><select id="product-primary" value={primary} onChange={(event) => { const next = event.target.value; setPrimary(next); setSecondary(secondary.filter((item) => item !== next)); }} required><option value="">Pilih kategori utama</option>{categories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}</select></div>
-      <fieldset className="field"><legend>Kategori tambahan (maksimal dua)</legend>{categories.map((category) => <label className="checkbox-row" key={category.code}><input type="checkbox" checked={secondary.includes(category.code)} disabled={category.code === primary} onChange={(event) => setSelectedCategory(category.code, event.target.checked)} />{category.label}</label>)}</fieldset>
+      <fieldset className="field category-options"><legend>Kategori tambahan (maksimal dua)</legend><div className="category-option-grid">{categories.map((category) => <label className="checkbox-row" key={category.code}><input type="checkbox" checked={secondary.includes(category.code)} disabled={category.code === primary} onChange={(event) => setSelectedCategory(category.code, event.target.checked)} />{category.label}</label>)}</div></fieldset>
       <div className="field"><label htmlFor="product-description">Deskripsi (opsional)</label><textarea id="product-description" maxLength={1000} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
       <label className="checkbox-row"><input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />{ui.available}</label>
       {status ? <div className="info-state" role="status" aria-live="polite">{status}</div> : null}
       {error ? <div className="form-error" role="alert">{error}</div> : null}
-      <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}>{busy ? ui.loading : ui.save}</button><button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button></div>
+      <div className="form-actions"><button className="button button-primary" type="submit" disabled={busy}><Icon name="check" size={17} />{busy ? ui.loading : ui.save}</button><button className="button button-text" type="button" onClick={onCancel}>{ui.cancel}</button></div>
     </form>
   );
 }

@@ -1,5 +1,6 @@
 import { formatIdr, ui } from "../../shared/i18n";
 import type { ProductSummary } from "../../shared/types";
+import { Icon } from "./Icon";
 
 type Props = { product: ProductSummary; quantity: number; onChange: (quantity: number) => void };
 
@@ -16,11 +17,11 @@ export function ProductCard({ product, quantity, onChange }: Props) {
         <div className="price">{formatIdr(product.priceIdr)}</div>
         {product.description ? <p className="muted">{product.description}</p> : null}
         {product.available ? (
-          quantity === 0 ? <button className="button button-primary" type="button" onClick={() => onChange(1)}>{ui.addToCart}</button> : (
+          quantity === 0 ? <button className="button button-primary" type="button" onClick={() => onChange(1)}><Icon name="plus" size={17} />{ui.addToCart}</button> : (
             <div className="quantity-control" aria-label={`${ui.quantity} ${product.name}`}>
-              <button type="button" aria-label={`Kurangi jumlah ${product.name}`} onClick={() => onChange(Math.max(0, quantity - 1))}>−</button>
+              <button type="button" aria-label={`Kurangi jumlah ${product.name}`} onClick={() => onChange(Math.max(0, quantity - 1))}><Icon name="minus" size={17} /></button>
               <output aria-live="polite">{quantity}</output>
-              <button type="button" aria-label={`Tambah jumlah ${product.name}`} disabled={quantity >= 99} onClick={() => onChange(Math.min(99, quantity + 1))}>+</button>
+              <button type="button" aria-label={`Tambah jumlah ${product.name}`} disabled={quantity >= 99} onClick={() => onChange(Math.min(99, quantity + 1))}><Icon name="plus" size={17} /></button>
             </div>
           )
         ) : <span className="unavailable">{ui.unavailable}</span>}
