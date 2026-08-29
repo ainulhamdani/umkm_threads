@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { validateCategorySelection } from "../src/shared/categories";
-import { normalizeIndonesianPhone, validatePin, validateShopSlug } from "../src/shared/validation";
+import { normalizeIndonesianPhone, validatePin, validatePrice, validateShopSlug } from "../src/shared/validation";
 
 describe("validasi marketplace", () => {
   test("menormalisasi nomor Indonesia ke format E.164", () => {
@@ -15,7 +15,14 @@ describe("validasi marketplace", () => {
 
   test("menolak slug jalur aplikasi", () => {
     expect(validateShopSlug("seller")).not.toEqual([]);
+    expect(validateShopSlug("sitemap.xml")).not.toEqual([]);
     expect(validateShopSlug("toko-bagus")).toEqual([]);
+  });
+
+  test("menerima harga nol dan menolak harga pecahan", () => {
+    expect(validatePrice(0)).toEqual([]);
+    expect(validatePrice("0")).toEqual([]);
+    expect(validatePrice(12.5)).not.toEqual([]);
   });
 
   test("membatasi kategori tambahan dan mencegah duplikat", () => {
@@ -23,5 +30,6 @@ describe("validasi marketplace", () => {
     expect(validateCategorySelection("FOOD", ["DRINKS", "DRINKS"]).length).toBeGreaterThan(0);
     expect(validateCategorySelection("FOOD", ["DRINKS", "BEAUTY_PERSONAL_CARE", "OTHER"]).length).toBeGreaterThan(0);
     expect(validateCategorySelection("FOOD", ["FOOD"]).length).toBeGreaterThan(0);
+    expect(validateCategorySelection("FOOD", ["DRINKS", 1]).length).toBeGreaterThan(0);
   });
 });

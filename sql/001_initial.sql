@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS locations (
   active BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (code),
   KEY idx_locations_level_parent (level, parent_code),
+  KEY idx_locations_level_parent_name (level, parent_code, name),
   CONSTRAINT fk_locations_parent FOREIGN KEY (parent_code) REFERENCES locations(code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

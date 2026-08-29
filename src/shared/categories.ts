@@ -31,6 +31,7 @@ export function validateCategorySelection(primaryCode: unknown, secondaryCodes: 
     return errors;
   }
 
+  if (secondaryCodes.some((value) => typeof value !== "string")) errors.push("Kategori tambahan tidak valid.");
   const normalized = secondaryCodes.filter((value): value is string => typeof value === "string");
   if (normalized.length > 2) errors.push("Pilih paling banyak dua kategori tambahan.");
   if (new Set(normalized).size !== normalized.length) errors.push("Kategori tambahan tidak boleh duplikat.");

@@ -19,6 +19,20 @@ if (!/^https:\/\//.test(dataset.metadata.sourceUrl) || !dataset.metadata.retriev
 const locationDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(dataset.locations)));
 const locationChecksum = Array.from(new Uint8Array(locationDigest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 if (locationChecksum !== dataset.metadata.checksumSha256) throw new Error("Checksum dataset wilayah tidak cocok.");
+const levelByCode = new Map<string, LocationRecord["level"]>();
+for (const location of dataset.locations) {
+  if (levelByCode.has(location.code)) throw new Error("Dataset wilayah memiliki kode duplikat.");
+  if (location.level !== "PROVINCE" && location.level !== "CITY_REGENCY" && location.level !== "DISTRICT") throw new Error("Dataset wilayah memiliki tingkat yang tidak valid.");
+  levelByCode.set(location.code, location.level);
+}
+for (const location of dataset.locations) {
+  const expectedParentLevel = location.level === "CITY_REGENCY" ? "PROVINCE" : location.level === "DISTRICT" ? "CITY_REGENCY" : null;
+  if (expectedParentLevel === null) {
+    if (location.parentCode !== null) throw new Error("Provinsi tidak boleh memiliki induk wilayah.");
+  } else if (!location.parentCode || levelByCode.get(location.parentCode) !== expectedParentLevel) {
+    throw new Error("Dataset wilayah memiliki hubungan induk-anak yang tidak valid.");
+  }
+}
 
 const connection = await mysql.createConnection({
   host: config.db.host,
@@ -43,6 +57,7 @@ try {
     );
   }
 
+  await connection.execute("UPDATE location_dataset_metadata SET active = FALSE WHERE active = TRUE");
   await connection.execute(
     "INSERT INTO location_dataset_metadata (source_url, snapshot_url, retrieved_at, dataset_version, checksum_sha256, row_count, active) VALUES (?, ?, ?, ?, ?, ?, TRUE)",
     [dataset.metadata.sourceUrl, dataset.metadata.snapshotUrl, dataset.metadata.retrievedAt, dataset.metadata.datasetVersion, dataset.metadata.checksumSha256, dataset.locations.length],
