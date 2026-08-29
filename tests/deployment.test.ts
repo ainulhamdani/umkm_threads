@@ -8,6 +8,8 @@ const attributes = await Bun.file(".gitattributes").text();
 const packageJson = JSON.parse(await Bun.file("package.json").text()) as { devDependencies?: Record<string, string> };
 const clientBuild = await Bun.file("scripts/build-client.ts").text();
 const styleSource = await Bun.file("src/client/styles.css").text();
+const indexHtml = await Bun.file("public/index.html").text();
+const server = await Bun.file("src/server/index.ts").text();
 
 describe("CapRover deployment", () => {
   test("uses a pinned Bun multi-stage production image", () => {
@@ -38,6 +40,16 @@ describe("CapRover deployment", () => {
     expect(clientBuild).toContain('"src/client/styles.css"');
     expect(clientBuild).toContain('"public/styles.css"');
     expect(styleSource).toContain('@import "tailwindcss";');
+  });
+
+  test("versions client assets to avoid stale CDN content", () => {
+    const stylesheetVersion = indexHtml.match(/href="\/styles\.css\?v=([a-f0-9]+)"/)?.[1];
+    const scriptVersion = indexHtml.match(/src="\/assets\/app\.js\?v=([a-f0-9]+)"/)?.[1];
+    expect(stylesheetVersion).toBeDefined();
+    expect(scriptVersion).toBe(stylesheetVersion);
+    expect(clientBuild).toContain("new Bun.CryptoHasher");
+    expect(clientBuild).toContain("public/index.html");
+    expect(server).toContain("max-age=31536000, immutable");
   });
 
   test("keeps database setup assets in the runtime image", () => {

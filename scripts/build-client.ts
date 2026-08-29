@@ -21,4 +21,19 @@ if (stylesExitCode !== 0) process.exit(stylesExitCode);
 
 console.log("Tailwind stylesheet created in public/styles.css");
 
+const assetHasher = new Bun.CryptoHasher("sha256");
+assetHasher.update(await Bun.file("public/assets/app.js").arrayBuffer());
+assetHasher.update(await Bun.file("public/styles.css").arrayBuffer());
+const assetVersion = assetHasher.digest("hex").slice(0, 16);
+const indexPath = "public/index.html";
+const indexHtml = await Bun.file(indexPath).text();
+if (!indexHtml.includes("/styles.css") || !indexHtml.includes("/assets/app.js")) {
+  throw new Error("Referensi aset client tidak ditemukan di public/index.html.");
+}
+const versionedIndexHtml = indexHtml
+  .replace(/\/styles\.css(?:\?v=[^"]*)?/g, `/styles.css?v=${assetVersion}`)
+  .replace(/\/assets\/app\.js(?:\?v=[^"]*)?/g, `/assets/app.js?v=${assetVersion}`);
+await Bun.write(indexPath, versionedIndexHtml);
+console.log(`Client assets versioned with ${assetVersion}`);
+
 export {};

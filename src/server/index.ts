@@ -67,9 +67,9 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return jsonResponse({ status: "ok" });
-    if (url.pathname === "/assets/app.js") return new Response(clientBundle, { headers: { "content-type": "text/javascript; charset=utf-8" } });
-    if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"));
-    if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8" } });
+    if (url.pathname === "/assets/app.js") return new Response(clientBundle, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
+    if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
+    if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/robots.txt") return robotsResponse();
     if (url.pathname === "/sitemap.xml") {
       try {
