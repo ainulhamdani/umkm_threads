@@ -4,6 +4,7 @@ import { serveMedia } from "./media";
 import { handlePublicRoute } from "./routes/public";
 import { handleSellerRoute } from "./routes/seller";
 import { handleMediaRoute } from "./routes/media";
+import { handleAdminRoute } from "./routes/admin";
 
 const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
@@ -23,6 +24,7 @@ const server = Bun.serve({
       try {
         const segments = pathSegments(url.pathname);
         if (segments[1] === "seller") return await handleSellerRoute(request, segments);
+        if (segments[1] === "admin") return await handleAdminRoute(request, segments);
         if (segments[1] === "media") return await handleMediaRoute(request, segments);
         return await handlePublicRoute(request, url, segments);
       } catch (error) {

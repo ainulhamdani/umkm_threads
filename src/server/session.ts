@@ -116,7 +116,10 @@ export async function requireSeller(request: Request): Promise<SellerSession> {
 
 export async function requireAdmin(request: Request): Promise<AdminSession> {
   const session = await getAdminSession(request);
-  if (!session) throw new HttpError(401, "ADMIN_AUTH_REQUIRED", "Silakan masuk sebagai superadmin terlebih dahulu.");
+  if (!session) {
+    if (await getSellerSession(request)) throw new HttpError(403, "FORBIDDEN", "Akses superadmin tidak diizinkan untuk penjual.");
+    throw new HttpError(401, "ADMIN_AUTH_REQUIRED", "Silakan masuk sebagai superadmin terlebih dahulu.");
+  }
   return session;
 }
 

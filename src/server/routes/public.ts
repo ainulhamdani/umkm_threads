@@ -1,4 +1,5 @@
 import type { LocationLevel, ShopSearchParams } from "../../shared/types";
+import { getPublicAdPlacement, type AdPlacement } from "../admin-service";
 import { createWhatsAppLink, listCategories, listLocations, listPublicShops, getPublicShop, type WhatsAppItemInput } from "../public-service";
 import { HttpError, json, methodNotAllowed, readJson } from "../http";
 import { appendCookie, CSRF_COOKIE, issueCsrfToken } from "../session";
@@ -69,6 +70,12 @@ export async function handlePublicRoute(request: Request, url: URL, segments: st
   if (segments[1] === "product-categories" && segments.length === 2) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     return json({ items: await listCategories() });
+  }
+  if (segments[1] === "adsense" && segments.length === 2) {
+    if (request.method !== "GET") return methodNotAllowed(["GET"]);
+    const placement = url.searchParams.get("placement")?.toUpperCase();
+    if (placement !== "HOME" && placement !== "SHOP" && placement !== "SELLER" && placement !== "ADMIN") throw new HttpError(400, "INVALID_AD_PLACEMENT", "Penempatan iklan tidak valid.");
+    return json(await getPublicAdPlacement(placement as AdPlacement));
   }
   throw new HttpError(404, "NOT_FOUND", "Rute API tidak ditemukan.");
 }

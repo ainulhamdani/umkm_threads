@@ -130,7 +130,7 @@ export async function validatePublicSearch(search: ShopSearchParams): Promise<vo
   if (search.categoryCode && !getCategory(search.categoryCode)) throw new HttpError(400, "INVALID_CATEGORY", "Kategori produk tidak tersedia.");
 }
 
-async function assertLocation(code: string, level: LocationLevel, parentCode: string | null): Promise<void> {
+export async function assertLocation(code: string, level: LocationLevel, parentCode: string | null): Promise<void> {
   const [rows] = await db.execute<RowDataPacket[]>(
     "SELECT code FROM locations WHERE code = ? AND level = ? AND active = TRUE AND (? IS NULL OR parent_code = ?) LIMIT 1",
     [code, level, parentCode, parentCode],

@@ -5,6 +5,8 @@ import { HomePage } from "./pages/HomePage";
 import { ShopPage } from "./pages/ShopPage";
 import { SellerAuthPage } from "./pages/SellerAuthPage";
 import { SellerDashboardPage } from "./pages/SellerDashboardPage";
+import { AdminAuthPage } from "./pages/AdminAuthPage";
+import { AdminPage } from "./pages/AdminPage";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -80,6 +82,6 @@ export function App() {
     document.title = `${ui.appName} | ${ui.appTagline}`;
   }, [path]);
 
-  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
+  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
   return <AppShell>{content}</AppShell>;
 }

@@ -51,6 +51,10 @@ export function getCategories(): Promise<{ items: ProductCategory[] }> {
   return request<{ items: ProductCategory[] }>("/api/product-categories");
 }
 
+export function getAdPlacement(placement: "HOME" | "SHOP" | "SELLER" | "ADMIN"): Promise<{ enabled: boolean; clientId: string; slotId: string }> {
+  return request(`/api/adsense?placement=${placement}`);
+}
+
 export function getShop(slug: string): Promise<PublicShop> {
   return request<PublicShop>(`/api/shops/${encodeURIComponent(slug)}`);
 }
@@ -113,3 +117,19 @@ export function uploadMedia(file: File, altText: string): Promise<{ id: number; 
   form.append("altText", altText);
   return request("/api/media", { method: "POST", body: form });
 }
+
+export type AdminSeller = { id: number; phone: string; status: string; pinResetRequired: boolean; shop: { id: number; name: string; slug: string; visibilityStatus: string } | null; productCount: number };
+export type AdminProduct = { id: number; name: string; priceIdr: number; available: boolean; visibilityStatus: string; shopId: number; shopName: string; primaryCategory: ProductCategory; imageUrl: string };
+export type AdsenseSettings = { enabled: boolean; clientId: string; slots: { HOME: string; SHOP: string; SELLER: string; ADMIN: string } };
+
+export function loginAdmin(phone: string, pin: string): Promise<{ adminId: number }> { return request<{ adminId: number }>("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phone, pin }) }); }
+export function logoutAdmin(): Promise<{ success: boolean }> { return request<{ success: boolean }>("/api/admin/logout", { method: "POST" }); }
+export function listAdminSellers(search = ""): Promise<{ items: AdminSeller[] }> { return request<{ items: AdminSeller[] }>(`/api/admin/sellers?q=${encodeURIComponent(search)}`); }
+export function listAdminProducts(search = ""): Promise<{ items: AdminProduct[] }> { return request<{ items: AdminProduct[] }>(`/api/admin/products?q=${encodeURIComponent(search)}`); }
+export function setShopVisibility(id: number, visible: boolean): Promise<{ success: boolean }> { return request(`/api/admin/shops/${id}/visibility`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ visible }) }); }
+export function setProductVisibility(id: number, visible: boolean): Promise<{ success: boolean }> { return request(`/api/admin/products/${id}/visibility`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ visible }) }); }
+export function resetSellerPin(id: number): Promise<{ temporaryPin: string }> { return request(`/api/admin/sellers/${id}/pin-reset`, { method: "POST" }); }
+export function getAdminAdsense(): Promise<AdsenseSettings> { return request<AdsenseSettings>("/api/admin/adsense"); }
+export function updateAdminAdsense(input: AdsenseSettings): Promise<AdsenseSettings> { return request<AdsenseSettings>("/api/admin/adsense", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }); }
+export type AuditLog = { id: number; actorType: string; actorId: number | null; actionCode: string; targetType: string | null; targetId: number | null; metadata: unknown; createdAt: string };
+export function listAuditLogs(): Promise<{ items: AuditLog[] }> { return request<{ items: AuditLog[] }>("/api/admin/audit-logs"); }
