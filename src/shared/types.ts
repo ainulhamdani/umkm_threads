@@ -26,7 +26,8 @@ export type ProductCategory = {
 export type ProductCategoryAssignment = {
   categoryCode: string;
   label?: string;
-  position: number;
+  role: "PRIMARY" | "SECONDARY";
+  position: 0 | 1 | 2;
 };
 
 export type ProductSummary = {

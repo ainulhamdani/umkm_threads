@@ -25,9 +25,9 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 
 - Use React 19.2 for interactive UI components.
 - Use TypeScript for application, service, and data types.
-- Use server-rendered public pages where possible for SEO and fast first render.
-- Use client components only for interactive state such as the cart, forms, and upload controls.
-- Use server-side HTTP handlers for JSON APIs and server-side mutation boundaries.
+- Serve a small static HTML shell and render the React application in the browser, with server-side HTTP handlers for JSON APIs and mutation boundaries.
+- Keep public SEO metadata synchronized in the HTML shell and client route state.
+- Use React components for interactive state such as the cart, forms, and upload controls.
 
 ### 2.2 Runtime and package management
 

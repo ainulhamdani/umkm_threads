@@ -70,6 +70,8 @@ if (locations.some((location) => location.parentCode !== null && !knownCodes.has
 }
 
 const datasetVersion = provincesResponse.meta?.updated_at ?? "tidak-diketahui";
+const locationDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(locations)));
+const checksumSha256 = Array.from(new Uint8Array(locationDigest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 const payload = {
   metadata: {
     sourceUrl,
@@ -77,6 +79,7 @@ const payload = {
     retrievedAt: new Date().toISOString().slice(0, 10),
     datasetVersion,
     rowCount: locations.length,
+    checksumSha256,
   },
   locations,
 };
@@ -85,6 +88,6 @@ await mkdir("data", { recursive: true });
 await Bun.write("data/locations.json", `${serialized}\n`);
 const checksum = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${serialized}\n`));
 const checksumHex = Array.from(new Uint8Array(checksum), (byte) => byte.toString(16).padStart(2, "0")).join("");
-console.log(`Dataset wilayah dibuat: ${locations.length} baris, SHA-256 ${checksumHex}`);
+console.log(`Dataset wilayah dibuat: ${locations.length} baris, SHA-256 ${checksumSha256} (berkas ${checksumHex})`);
 
 export {};

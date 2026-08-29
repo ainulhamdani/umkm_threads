@@ -5,6 +5,7 @@ import { CartDrawer, type CartLine } from "../components/CartDrawer";
 import { ProductCard } from "../components/ProductCard";
 import { ui } from "../../shared/i18n";
 import type { ProductSummary, PublicShop } from "../../shared/types";
+import { setCanonical, setMeta } from "../seo";
 
 type StoredCart = { shopId: number; shopSlug: string; shopName: string; lines: Array<{ productId: number; quantity: number }> };
 const CART_STORAGE_KEY = "threads-umkm-cart";
@@ -35,11 +36,13 @@ export function ShopPage({ slug }: { slug: string }) {
   const [shop, setShop] = useState<PublicShop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cart, setCart] = useState<{ shopId: number; shopSlug: string; shopName: string; lines: CartLine[] } | null>(null);
+  const [cartReady, setCartReady] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     setShop(null);
     setError(null);
+    setCartReady(false);
     getShop(slug).then((loadedShop) => {
       setShop(loadedShop);
       const stored = readStoredCart();
@@ -53,13 +56,34 @@ export function ShopPage({ slug }: { slug: string }) {
       } else {
         setCart(null);
       }
-    }).catch((reason: unknown) => setError(notFoundMessage(reason)));
+      setCartReady(true);
+    }).catch((reason: unknown) => { setError(notFoundMessage(reason)); setCartReady(true); });
   }, [slug]);
 
   useEffect(() => {
+    if (!cartReady) return;
     if (!cart) { window.localStorage.removeItem(CART_STORAGE_KEY); return; }
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ shopId: cart.shopId, shopSlug: cart.shopSlug, shopName: cart.shopName, lines: cart.lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })) } satisfies StoredCart));
-  }, [cart]);
+  }, [cart, cartReady]);
+
+  useEffect(() => {
+    if (!shop) return;
+    const description = `${shop.name} di ${locationText(shop)}. Lihat katalog produk UMKM dan hubungi penjual melalui WhatsApp.`;
+    document.title = `${shop.name} | ${ui.appName}`;
+    setMeta("description", description);
+    setMeta("robots", "index,follow");
+    setMeta("og:title", `${shop.name} | ${ui.appName}`, "property");
+    setMeta("og:description", description, "property");
+    setMeta("og:type", "website", "property");
+    setMeta("og:url", new URL(`/${shop.slug}`, window.location.origin).toString(), "property");
+    const image = shop.profileImageUrl ?? shop.products[0]?.imageUrl;
+    if (image) setMeta("og:image", new URL(image, window.location.origin).toString(), "property");
+    setCanonical(`/${shop.slug}`);
+  }, [shop]);
+
+  useEffect(() => {
+    if (error) setMeta("robots", "noindex,nofollow");
+  }, [error]);
 
   const quantityByProduct = useMemo(() => new Map(cart?.lines.map((line) => [line.product.id, line.quantity]) ?? []), [cart]);
 

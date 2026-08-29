@@ -7,6 +7,8 @@ import { SellerAuthPage } from "./pages/SellerAuthPage";
 import { SellerDashboardPage } from "./pages/SellerDashboardPage";
 import { AdminAuthPage } from "./pages/AdminAuthPage";
 import { AdminPage } from "./pages/AdminPage";
+import { AdsenseSlot } from "./components/AdsenseSlot";
+import { setCanonical, setMeta } from "./seo";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -31,18 +33,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
     </div>
-  );
-}
-
-function HomePlaceholder() {
-  return (
-    <>
-      <section className="hero">
-        <h1>Temukan toko lokal di sekitar Anda</h1>
-        <p>Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
-      </section>
-      <div className="info-state">Fondasi aplikasi siap. Fitur katalog akan dimuat pada pass berikutnya.</div>
-    </>
   );
 }
 
@@ -80,8 +70,12 @@ export function App() {
 
   useEffect(() => {
     document.title = `${ui.appName} | ${ui.appTagline}`;
+    const privateRoute = path.startsWith("/seller") || path.startsWith("/admin");
+    setMeta("description", "Katalog toko UMKM Indonesia dan pemesanan langsung melalui WhatsApp.");
+    setMeta("robots", privateRoute ? "noindex,nofollow" : "index,follow");
+    setCanonical(path === "/" ? "/" : path);
   }, [path]);
 
-  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <NotFound />;
+  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" || path === "/seller/shop" || path === "/seller/products" ? <SellerDashboardPage /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <><NotFound /><AdsenseSlot placement="HOME" /></>;
   return <AppShell>{content}</AppShell>;
 }

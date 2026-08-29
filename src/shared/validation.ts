@@ -4,9 +4,13 @@ export const RESERVED_SHOP_SLUGS = new Set([
   "assets",
   "favicon.ico",
   "health",
+  "login",
   "media",
+  "register",
   "robots.txt",
   "seller",
+  "sitemap.xml",
+  "undefined",
 ]);
 
 export type ValidationResult<T> = { value: T; errors: string[] };
@@ -46,8 +50,8 @@ export function validateText(input: unknown, label: string, min: number, max: nu
 export function validatePrice(input: unknown): string[] {
   if (typeof input !== "number" && typeof input !== "string") return ["Harga wajib diisi."];
   const value = typeof input === "number" ? input : Number(input);
-  if (!Number.isSafeInteger(value) || value < 1 || value > 1_000_000_000_000) {
-    return ["Harga harus berupa bilangan bulat rupiah yang lebih besar dari nol."];
+  if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000_000_000) {
+    return ["Harga harus berupa bilangan bulat rupiah yang tidak negatif."];
   }
   return [];
 }

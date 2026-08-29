@@ -1,11 +1,11 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getCategory } from "../shared/categories";
-import { normalizeIndonesianPhone, validatePin, validateText } from "../shared/validation";
+import { validateText } from "../shared/validation";
 import { db } from "./db";
 import { HttpError } from "./http";
 import { revokeAllSellerSessions } from "./session";
 
-type AdminRow = RowDataPacket & { id: number; phone_e164: string; pin_hash: string; status: string };
+type AdminRow = RowDataPacket & { id: number; email: string; password_hash: string; status: string };
 type AdRow = RowDataPacket & { enabled: number | boolean; client_id: string | null; home_slot: string | null; shop_slot: string | null; seller_slot: string | null; admin_slot: string | null };
 export type AdPlacement = "HOME" | "SHOP" | "SELLER" | "ADMIN";
 
@@ -17,12 +17,14 @@ function idValue(value: string): number {
   return id;
 }
 
-export async function authenticateAdmin(phoneInput: unknown, pinInput: unknown): Promise<{ adminId: number }> {
-  const phone = normalizeIndonesianPhone(phoneInput);
-  if (phone.errors.length > 0 || validatePin(pinInput).length > 0) throw new HttpError(401, "LOGIN_FAILED", "Nomor telepon atau PIN superadmin tidak benar.");
-  const [rows] = await db.execute<AdminRow[]>("SELECT id, phone_e164, pin_hash, status FROM superadmin_users WHERE phone_e164 = ? LIMIT 1", [phone.value]);
+export async function authenticateAdmin(emailInput: unknown, passwordInput: unknown): Promise<{ adminId: number }> {
+  const email = typeof emailInput === "string" ? emailInput.trim().toLowerCase() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof passwordInput !== "string" || passwordInput.length === 0) {
+    throw new HttpError(401, "LOGIN_FAILED", "Email atau kata sandi superadmin tidak benar.");
+  }
+  const [rows] = await db.execute<AdminRow[]>("SELECT id, email, password_hash, status FROM superadmin_users WHERE email = ? LIMIT 1", [email]);
   const admin = rows[0];
-  if (!admin || admin.status !== "ACTIVE" || !(await Bun.password.verify(pinInput as string, admin.pin_hash))) throw new HttpError(401, "LOGIN_FAILED", "Nomor telepon atau PIN superadmin tidak benar.");
+  if (!admin || admin.status !== "ACTIVE" || !(await Bun.password.verify(passwordInput, admin.password_hash))) throw new HttpError(401, "LOGIN_FAILED", "Email atau kata sandi superadmin tidak benar.");
   return { adminId: Number(admin.id) };
 }
 
@@ -71,7 +73,9 @@ export async function resetSellerPin(adminId: number, sellerIdValue: string): Pr
   const sellerId = idValue(sellerIdValue);
   const [sellers] = await db.execute<RowDataPacket[]>("SELECT id FROM sellers WHERE id = ? LIMIT 1", [sellerId]);
   if (sellers.length === 0) throw new HttpError(404, "SELLER_NOT_FOUND", "Penjual tidak ditemukan.");
-  const temporaryPin = String(100000 + Math.floor(Math.random() * 900000));
+  const random = new Uint32Array(1);
+  crypto.getRandomValues(random);
+  const temporaryPin = String(100000 + (random[0] ?? 0) % 900000);
   const pinHash = await Bun.password.hash(temporaryPin, { algorithm: "argon2id" });
   await db.execute("UPDATE sellers SET pin_hash = ?, pin_reset_required = TRUE WHERE id = ?", [pinHash, sellerId]);
   await revokeAllSellerSessions(sellerId);

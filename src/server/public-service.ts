@@ -230,6 +230,13 @@ export async function getPublicShop(slug: string): Promise<PublicShop | null> {
   return { ...shopFromRow(row), phone: row.phone_e164 ?? "", description: row.description, products: productMap.get(Number(row.id)) ?? [] };
 }
 
+export async function listPublishedShopSlugs(): Promise<string[]> {
+  const [rows] = await db.execute<RowDataPacket[]>(
+    "SELECT s.slug FROM shops s JOIN sellers se ON se.id = s.seller_id WHERE s.visibility_status = 'PUBLISHED' AND se.status = 'ACTIVE' ORDER BY s.created_at DESC, s.id DESC",
+  );
+  return rows.map((row) => String(row.slug));
+}
+
 function cleanCustomerText(value: unknown, maxLength: number): string {
   if (typeof value !== "string") return "";
   return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, maxLength);

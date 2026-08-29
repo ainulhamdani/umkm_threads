@@ -4,7 +4,8 @@
     "snapshotUrl": "https://wilayah.id/",
     "retrievedAt": "2026-08-29",
     "datasetVersion": "2025-07-04",
-    "rowCount": 7837
+    "rowCount": 7837,
+    "checksumSha256": "0e172333ddb017fb6aa84764bfdbe1fb097bfb88dc17879bb49b005545005097"
   },
   "locations": [
     {

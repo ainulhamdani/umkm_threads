@@ -136,6 +136,7 @@ export async function createSellerProduct(sellerId: number, input: ProductMutati
     await connection.beginTransaction();
     const [result] = await connection.execute<ResultSetHeader>("INSERT INTO products (shop_id, media_id, name, price_idr, description, primary_category_code, available) VALUES (?, ?, ?, ?, ?, ?, ?)", [shopId, values.mediaId, values.name, values.priceIdr, values.description, values.primary, values.available]);
     await saveAssignments(connection, Number(result.insertId), values.secondary);
+    await connection.execute("UPDATE media SET used_at = COALESCE(used_at, NOW()) WHERE id = ? AND owner_type = 'SELLER' AND owner_id = ?", [values.mediaId, sellerId]);
     await connection.commit();
     return await readProduct(sellerId, Number(result.insertId));
   } catch (error) {
@@ -157,6 +158,7 @@ export async function updateSellerProduct(sellerId: number, productIdValue: stri
     await connection.beginTransaction();
     await connection.execute("UPDATE products SET media_id = ?, name = ?, price_idr = ?, description = ?, primary_category_code = ?, available = ? WHERE id = ?", [values.mediaId, values.name, values.priceIdr, values.description, values.primary, values.available, productId]);
     await saveAssignments(connection, productId, values.secondary);
+    await connection.execute("UPDATE media SET used_at = COALESCE(used_at, NOW()) WHERE id = ? AND owner_type = 'SELLER' AND owner_id = ?", [values.mediaId, sellerId]);
     await connection.commit();
     return await readProduct(sellerId, productId);
   } catch (error) {

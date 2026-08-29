@@ -1,0 +1,2 @@
+ALTER TABLE superadmin_users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL AFTER id;
+ALTER TABLE superadmin_users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) NULL AFTER email;

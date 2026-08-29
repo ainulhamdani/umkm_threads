@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS locations (
   level ENUM('PROVINCE', 'CITY_REGENCY', 'DISTRICT') NOT NULL,
   name VARCHAR(160) NOT NULL,
   parent_code VARCHAR(20) NULL,
+  dataset_version VARCHAR(80) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   PRIMARY KEY (code),
   KEY idx_locations_level_parent (level, parent_code),
@@ -41,9 +42,12 @@ CREATE TABLE IF NOT EXISTS media (
   original_name VARCHAR(255) NOT NULL,
   mime_type VARCHAR(80) NOT NULL,
   byte_size INT UNSIGNED NOT NULL,
+  width SMALLINT UNSIGNED NOT NULL,
+  height SMALLINT UNSIGNED NOT NULL,
   alt_text VARCHAR(255) NOT NULL,
   owner_type ENUM('SELLER', 'SUPERADMIN') NOT NULL,
   owner_id BIGINT UNSIGNED NOT NULL,
+  used_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_media_storage_key (storage_key),
@@ -111,6 +115,7 @@ CREATE TABLE IF NOT EXISTS product_category_assignments (
   role ENUM('SECONDARY') NOT NULL DEFAULT 'SECONDARY',
   PRIMARY KEY (product_id, category_code),
   UNIQUE KEY uq_product_category_position (product_id, position),
+  CONSTRAINT chk_assignment_position CHECK (position IN (1, 2)),
   CONSTRAINT fk_assignments_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   CONSTRAINT fk_assignments_category FOREIGN KEY (category_code) REFERENCES product_categories(code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -131,13 +136,13 @@ CREATE TABLE IF NOT EXISTS seller_sessions (
 
 CREATE TABLE IF NOT EXISTS superadmin_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  phone_e164 VARCHAR(20) NOT NULL,
-  pin_hash VARCHAR(255) NOT NULL,
-  status ENUM('ACTIVE', 'SUSPENDED') NOT NULL DEFAULT 'ACTIVE',
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  status ENUM('ACTIVE', 'DISABLED') NOT NULL DEFAULT 'ACTIVE',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_superadmin_phone (phone_e164)
+  UNIQUE KEY uq_superadmin_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS superadmin_sessions (

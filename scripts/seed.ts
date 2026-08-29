@@ -2,19 +2,23 @@ import { readFile } from "node:fs/promises";
 import mysql from "mysql2/promise";
 import { config } from "../src/shared/config";
 import { PRODUCT_CATEGORIES } from "../src/shared/categories";
-import { normalizeIndonesianPhone, validatePin } from "../src/shared/validation";
+import { validateText } from "../src/shared/validation";
 
 type LocationRecord = { code: string; level: "PROVINCE" | "CITY_REGENCY" | "DISTRICT"; name: string; parentCode: string | null };
 type LocationDataset = {
-  metadata: { sourceUrl: string; snapshotUrl: string; retrievedAt: string; datasetVersion: string; rowCount: number };
+  metadata: { sourceUrl: string; snapshotUrl: string; retrievedAt: string; datasetVersion: string; rowCount: number; checksumSha256: string };
   locations: LocationRecord[];
 };
 
-const adminPhone = normalizeIndonesianPhone(Bun.env.SUPERADMIN_PHONE);
-const adminPinErrors = validatePin(Bun.env.SUPERADMIN_PIN);
-if (adminPhone.errors.length || adminPinErrors.length) throw new Error("SUPERADMIN_PHONE atau SUPERADMIN_PIN belum valid.");
+const adminEmail = Bun.env.SUPERADMIN_EMAIL?.trim().toLowerCase() ?? "";
+const adminPassword = Bun.env.SUPERADMIN_PASSWORD ?? "";
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail) || validateText(adminPassword, "SUPERADMIN_PASSWORD", 12, 255).length > 0) throw new Error("SUPERADMIN_EMAIL atau SUPERADMIN_PASSWORD belum valid.");
 const dataset = JSON.parse(await readFile("data/locations.json", "utf8")) as LocationDataset;
 if (dataset.locations.length !== dataset.metadata.rowCount) throw new Error("Jumlah baris dataset wilayah tidak cocok dengan metadata.");
+if (!/^https:\/\//.test(dataset.metadata.sourceUrl) || !dataset.metadata.retrievedAt || !dataset.metadata.datasetVersion || !/^[a-f0-9]{64}$/.test(dataset.metadata.checksumSha256)) throw new Error("Metadata dataset wilayah belum lengkap.");
+const locationDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(dataset.locations)));
+const locationChecksum = Array.from(new Uint8Array(locationDigest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+if (locationChecksum !== dataset.metadata.checksumSha256) throw new Error("Checksum dataset wilayah tidak cocok.");
 
 const connection = await mysql.createConnection({
   host: config.db.host,
@@ -34,27 +38,24 @@ try {
 
   for (const location of dataset.locations) {
     await connection.execute(
-      "INSERT INTO locations (code, level, name, parent_code, active) VALUES (?, ?, ?, ?, TRUE) ON DUPLICATE KEY UPDATE level = VALUES(level), name = VALUES(name), parent_code = VALUES(parent_code), active = TRUE",
-      [location.code, location.level, location.name, location.parentCode],
+      "INSERT INTO locations (code, level, name, parent_code, dataset_version, active) VALUES (?, ?, ?, ?, ?, TRUE) ON DUPLICATE KEY UPDATE level = VALUES(level), name = VALUES(name), parent_code = VALUES(parent_code), dataset_version = VALUES(dataset_version), active = TRUE",
+      [location.code, location.level, location.name, location.parentCode, dataset.metadata.datasetVersion],
     );
   }
 
-  const serialized = JSON.stringify({ metadata: dataset.metadata, locations: dataset.locations }, null, 2) + "\n";
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(serialized));
-  const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
   await connection.execute(
     "INSERT INTO location_dataset_metadata (source_url, snapshot_url, retrieved_at, dataset_version, checksum_sha256, row_count, active) VALUES (?, ?, ?, ?, ?, ?, TRUE)",
-    [dataset.metadata.sourceUrl, dataset.metadata.snapshotUrl, dataset.metadata.retrievedAt, dataset.metadata.datasetVersion, checksum, dataset.locations.length],
+    [dataset.metadata.sourceUrl, dataset.metadata.snapshotUrl, dataset.metadata.retrievedAt, dataset.metadata.datasetVersion, dataset.metadata.checksumSha256, dataset.locations.length],
   );
 
-  const pinHash = await Bun.password.hash(Bun.env.SUPERADMIN_PIN as string, { algorithm: "argon2id" });
-  await connection.execute(
-    "INSERT INTO superadmin_users (phone_e164, pin_hash, status) VALUES (?, ?, 'ACTIVE') ON DUPLICATE KEY UPDATE status = 'ACTIVE'",
-    [adminPhone.value, pinHash],
-  );
-  const [adminRows] = await connection.execute("SELECT id FROM superadmin_users WHERE phone_e164 = ? LIMIT 1", [adminPhone.value]);
+  const passwordHash = await Bun.password.hash(adminPassword, { algorithm: "argon2id" });
+  const [adminRows] = await connection.execute("SELECT id FROM superadmin_users ORDER BY id ASC LIMIT 1");
   const adminId = (adminRows as Array<{ id: number }>)[0]?.id;
-  if (!adminId) throw new Error("Superadmin seed gagal.");
+  if (adminId) await connection.execute("UPDATE superadmin_users SET email = ?, password_hash = ?, status = 'ACTIVE' WHERE id = ?", [adminEmail, passwordHash, adminId]);
+  else await connection.execute("INSERT INTO superadmin_users (email, password_hash, status) VALUES (?, ?, 'ACTIVE')", [adminEmail, passwordHash]);
+  const [seededRows] = await connection.execute("SELECT id FROM superadmin_users WHERE email = ? LIMIT 1", [adminEmail]);
+  const seededAdminId = (seededRows as Array<{ id: number }>)[0]?.id;
+  if (!seededAdminId) throw new Error("Superadmin seed gagal.");
   await connection.execute("INSERT INTO adsense_settings (id, enabled) VALUES (1, FALSE) ON DUPLICATE KEY UPDATE id = id");
   console.log(`Seed selesai: ${PRODUCT_CATEGORIES.length} kategori, ${dataset.locations.length} wilayah.`);
 } finally {

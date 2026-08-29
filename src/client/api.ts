@@ -122,7 +122,7 @@ export type AdminSeller = { id: number; phone: string; status: string; pinResetR
 export type AdminProduct = { id: number; name: string; priceIdr: number; available: boolean; visibilityStatus: string; shopId: number; shopName: string; primaryCategory: ProductCategory; imageUrl: string };
 export type AdsenseSettings = { enabled: boolean; clientId: string; slots: { HOME: string; SHOP: string; SELLER: string; ADMIN: string } };
 
-export function loginAdmin(phone: string, pin: string): Promise<{ adminId: number }> { return request<{ adminId: number }>("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phone, pin }) }); }
+export function loginAdmin(email: string, password: string): Promise<{ adminId: number }> { return request<{ adminId: number }>("/api/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) }); }
 export function logoutAdmin(): Promise<{ success: boolean }> { return request<{ success: boolean }>("/api/admin/logout", { method: "POST" }); }
 export function listAdminSellers(search = ""): Promise<{ items: AdminSeller[] }> { return request<{ items: AdminSeller[] }>(`/api/admin/sellers?q=${encodeURIComponent(search)}`); }
 export function listAdminProducts(search = ""): Promise<{ items: AdminProduct[] }> { return request<{ items: AdminProduct[] }>(`/api/admin/products?q=${encodeURIComponent(search)}`); }

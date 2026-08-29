@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { assertLocation } from "./public-service";
-import { assertOwnedMedia } from "./media";
+import { assertOwnedMedia, markMediaUsed } from "./media";
 import { db } from "./db";
 import { HttpError } from "./http";
 import { revokeAllSellerSessions } from "./session";
@@ -156,6 +156,7 @@ export async function createShop(sellerId: number, input: ShopMutation): Promise
   }
   const shop = await findShop(sellerId);
   if (!shop) throw new Error("Toko berhasil disimpan tetapi tidak dapat dibaca kembali.");
+  if (values.profileMediaId !== null) await markMediaUsed(values.profileMediaId, "SELLER", sellerId);
   return shopResource(shop);
 }
 
@@ -169,13 +170,14 @@ export async function updateShop(sellerId: number, input: ShopMutation & Record<
   if ("slug" in input || "phone" in input) throw new HttpError(400, "IMMUTABLE_SHOP_FIELDS", "URL toko dan nomor telepon memiliki jalur perubahan terpisah.");
   const current = await findShop(sellerId);
   if (!current) throw new HttpError(404, "SHOP_NOT_SETUP", "Toko belum dibuat.");
-  const values = await validatedShopInput({ ...input, name: input.name ?? current.name, provinceCode: input.provinceCode ?? current.province_code, cityRegencyCode: input.cityRegencyCode ?? current.city_regency_code, districtCode: input.districtCode ?? current.district_code, addressDetail: input.addressDetail ?? current.address_detail }, sellerId, current);
+  const values = await validatedShopInput({ ...input, name: input.name ?? current.name, description: input.description ?? current.description, provinceCode: input.provinceCode ?? current.province_code, cityRegencyCode: input.cityRegencyCode ?? current.city_regency_code, districtCode: input.districtCode ?? current.district_code, addressDetail: input.addressDetail ?? current.address_detail }, sellerId, current);
   await db.execute(
     `UPDATE shops SET name = ?, description = ?, profile_media_id = ?, province_code = ?, city_regency_code = ?, district_code = ?, address_detail = ? WHERE id = ? AND seller_id = ?`,
     [values.name, values.description, values.profileMediaId, values.provinceCode, values.cityRegencyCode, values.districtCode, values.addressDetail, current.id, sellerId],
   );
   const shop = await findShop(sellerId);
   if (!shop) throw new Error("Toko berhasil diperbarui tetapi tidak dapat dibaca kembali.");
+  if (values.profileMediaId !== null) await markMediaUsed(values.profileMediaId, "SELLER", sellerId);
   return shopResource(shop);
 }
 

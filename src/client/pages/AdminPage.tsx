@@ -1,10 +1,50 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, getAdminAdsense, listAdminProducts, listAdminSellers, listAuditLogs, logoutAdmin, resetSellerPin, setProductVisibility, setShopVisibility, updateAdminAdsense, type AdminProduct, type AdminSeller, type AdsenseSettings, type AuditLog } from "../api";
+import {
+  ApiError,
+  getAdminAdsense,
+  listAdminProducts,
+  listAdminSellers,
+  listAuditLogs,
+  logoutAdmin,
+  resetSellerPin,
+  setProductVisibility,
+  setShopVisibility,
+  updateAdminAdsense,
+  type AdminProduct,
+  type AdminSeller,
+  type AdsenseSettings,
+  type AuditLog,
+} from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { formatIdr, ui } from "../../shared/i18n";
 
-function navigate(path: string) { window.history.pushState({}, "", path); window.dispatchEvent(new PopStateEvent("popstate")); }
-function actionLabel(code: string): string { const labels: Record<string, string> = { SHOP_VISIBILITY_CHANGED: "Visibilitas toko diubah", PRODUCT_VISIBILITY_CHANGED: "Visibilitas produk diubah", SELLER_PIN_RESET: "PIN penjual diatur ulang", ADSENSE_SETTINGS_CHANGED: "Pengaturan iklan diubah", WHATSAPP_LINK_CREATED: "Tautan WhatsApp dibuat" }; return labels[code] ?? "Aktivitas sistem"; }
+function navigate(path: string) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function actionLabel(code: string): string {
+  const labels: Record<string, string> = {
+    SELLER_REGISTERED: "Penjual mendaftar",
+    SELLER_LOGIN_SUCCEEDED: "Penjual masuk",
+    SELLER_LOGIN_FAILED: "Percobaan masuk penjual gagal",
+    SHOP_CREATED: "Toko dibuat",
+    SHOP_UPDATED: "Profil toko diperbarui",
+    PRODUCT_CREATED: "Produk dibuat",
+    PRODUCT_UPDATED: "Produk diperbarui",
+    PRODUCT_AVAILABILITY_CHANGED: "Ketersediaan produk diubah",
+    SHOP_VISIBILITY_CHANGED: "Visibilitas toko diubah",
+    PRODUCT_VISIBILITY_CHANGED: "Visibilitas produk diubah",
+    SELLER_PIN_RESET: "PIN penjual diatur ulang",
+    ADSENSE_SETTINGS_CHANGED: "Pengaturan iklan diubah",
+    WHATSAPP_LINK_CREATED: "Tautan WhatsApp dibuat",
+  };
+  return labels[code] ?? "Aktivitas sistem";
+}
+
+function adPlacementLabel(placement: keyof AdsenseSettings["slots"]): string {
+  return placement === "HOME" ? "beranda" : placement === "SHOP" ? "toko" : placement === "SELLER" ? "penjual" : "superadmin";
+}
 
 export function AdminPage() {
   const [sellers, setSellers] = useState<AdminSeller[]>([]);
@@ -17,19 +57,134 @@ export function AdminPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   function load() {
-    setLoading(true); setError(null);
-    Promise.all([listAdminSellers(search), listAdminProducts(search), listAuditLogs(), getAdminAdsense()]).then(([sellerResult, productResult, logResult, adResult]) => { setSellers(sellerResult.items); setProducts(productResult.items); setLogs(logResult.items); setAds(adResult); }).catch((reason: unknown) => { if (reason instanceof ApiError && reason.status === 401) setError("Sesi superadmin berakhir. Silakan masuk kembali."); else setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); }).finally(() => setLoading(false));
+    setLoading(true);
+    setError(null);
+    Promise.all([listAdminSellers(search), listAdminProducts(search), listAuditLogs(), getAdminAdsense()])
+      .then(([sellerResult, productResult, logResult, adResult]) => {
+        setSellers(sellerResult.items);
+        setProducts(productResult.items);
+        setLogs(logResult.items);
+        setAds(adResult);
+      })
+      .catch((reason: unknown) => {
+        if (reason instanceof ApiError && reason.status === 401) setError("Sesi superadmin berakhir. Silakan masuk kembali.");
+        else setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+      })
+      .finally(() => setLoading(false));
   }
-  useEffect(() => { load(); }, []);
 
-  async function searchSubmit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); load(); }
-  async function toggleShop(seller: AdminSeller) { if (!seller.shop) return; try { await setShopVisibility(seller.shop.id, seller.shop.visibilityStatus !== "PUBLISHED"); setMessage("Visibilitas toko diperbarui."); load(); } catch (reason) { setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); } }
-  async function toggleProduct(product: AdminProduct) { try { await setProductVisibility(product.id, product.visibilityStatus !== "PUBLISHED"); setMessage("Visibilitas produk diperbarui."); load(); } catch (reason) { setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); } }
-  async function pinReset(seller: AdminSeller) { try { const result = await resetSellerPin(seller.id); setMessage(`PIN sementara untuk ${seller.phone}: ${result.temporaryPin}. Simpan atau sampaikan dengan aman.`); load(); } catch (reason) { setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); } }
-  async function saveAds(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!ads) return; try { setAds(await updateAdminAdsense(ads)); setMessage("Pengaturan iklan tersimpan."); } catch (reason) { setError(reason instanceof ApiError ? reason.message : ui.errorGeneric); } }
-  async function logout() { await logoutAdmin().catch((reason: unknown) => console.warn("Keluar dari sesi superadmin gagal.", reason)); navigate("/"); }
+  useEffect(() => {
+    load();
+  }, []);
+
+  function searchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    load();
+  }
+
+  async function toggleShop(seller: AdminSeller) {
+    if (!seller.shop) return;
+    try {
+      await setShopVisibility(seller.shop.id, seller.shop.visibilityStatus !== "PUBLISHED");
+      setMessage("Visibilitas toko diperbarui.");
+      load();
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+    }
+  }
+
+  async function toggleProduct(product: AdminProduct) {
+    try {
+      await setProductVisibility(product.id, product.visibilityStatus !== "PUBLISHED");
+      setMessage("Visibilitas produk diperbarui.");
+      load();
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+    }
+  }
+
+  async function pinReset(seller: AdminSeller) {
+    try {
+      const result = await resetSellerPin(seller.id);
+      setMessage(`PIN sementara untuk ${seller.phone}: ${result.temporaryPin}. Simpan atau sampaikan dengan aman.`);
+      load();
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+    }
+  }
+
+  async function saveAds(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ads) return;
+    try {
+      setAds(await updateAdminAdsense(ads));
+      setMessage("Pengaturan iklan tersimpan.");
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : ui.errorGeneric);
+    }
+  }
+
+  async function logout() {
+    await logoutAdmin().catch((reason: unknown) => console.warn("Keluar dari sesi superadmin gagal.", reason));
+    navigate("/");
+  }
 
   if (loading && !ads) return <div className="loading-state">{ui.loading}</div>;
   if (error && !ads && sellers.length === 0) return <div className="error-state" role="alert"><h1>Konsol superadmin tidak tersedia</h1><p>{error}</p><a className="button button-primary" href="/admin/login" data-nav="true">{ui.login}</a></div>;
-  return <><section className="hero"><h1>{ui.adminConsole}</h1><p>Moderasi toko, dukung penjual, dan kelola penempatan iklan.</p><button className="button button-text" type="button" onClick={logout}>{ui.logout}</button></section>{error ? <div className="error-state" role="alert">{error}</div> : null}{message ? <div className="info-state" role="status">{message}</div> : null}<form className="filter-panel" onSubmit={searchSubmit}><div className="field"><label htmlFor="admin-search">Cari penjual, toko, atau produk</label><input id="admin-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomor telepon atau nama" /></div><button className="button button-primary" type="submit">{ui.search}</button></form><AdsenseSlot placement="ADMIN" /><div className="dashboard-grid"><section><div className="section-heading"><div><h2>Penjual dan toko</h2><p>{sellers.length} penjual</p></div></div><div className="data-list">{sellers.map((seller) => <article className="data-row" key={seller.id}><strong>{seller.phone}</strong><p className="muted">{seller.shop ? `${seller.shop.name} · /${seller.shop.slug}` : "Profil toko belum dibuat"}</p><span className="status-badge">{seller.shop?.visibilityStatus === "HIDDEN" ? "Toko disembunyikan" : seller.shop ? "Toko tampil" : "Belum ada toko"}</span><div className="card-actions"><button className="button button-secondary" type="button" onClick={() => pinReset(seller)}>Atur ulang PIN</button>{seller.shop ? <button className="button button-text" type="button" onClick={() => toggleShop(seller)}>{seller.shop.visibilityStatus === "PUBLISHED" ? "Sembunyikan toko" : "Tampilkan toko"}</button> : null}</div></article>)}</div></section><section><div className="section-heading"><div><h2>Produk</h2><p>{products.length} produk</p></div></div><div className="data-list">{products.map((product) => <article className="data-row" key={product.id}><strong>{product.name}</strong><p className="muted">{product.shopName} · {formatIdr(product.priceIdr)} · {product.primaryCategory.label}</p><span className={`status-badge${product.visibilityStatus === "HIDDEN" ? " error" : ""}`}>{product.visibilityStatus === "HIDDEN" ? "Disembunyikan" : product.available ? "Tersedia" : "Tidak tersedia"}</span><button className="button button-text" type="button" onClick={() => toggleProduct(product)}>{product.visibilityStatus === "PUBLISHED" ? "Sembunyikan produk" : "Tampilkan produk"}</button></article>)}</div></section></div>{ads ? <form className="form-card" onSubmit={saveAds}><h2>Pengaturan Google AdSense</h2><label className="checkbox-row"><input type="checkbox" checked={ads.enabled} onChange={(event) => setAds({ ...ads, enabled: event.target.checked })} />Aktifkan iklan</label><div className="field"><label htmlFor="ads-client">Client ID</label><input id="ads-client" value={ads.clientId} onChange={(event) => setAds({ ...ads, clientId: event.target.value })} placeholder="ca-pub-..." /></div>{(["HOME", "SHOP", "SELLER", "ADMIN"] as const).map((placement) => <div className="field" key={placement}><label htmlFor={`ads-${placement}`}>Slot {placement}</label><input id={`ads-${placement}`} value={ads.slots[placement]} onChange={(event) => setAds({ ...ads, slots: { ...ads.slots, [placement]: event.target.value } })} /></div>)}<button className="button button-primary" type="submit">{ui.save}</button></form> : null}<section><div className="section-heading"><div><h2>Aktivitas terbaru</h2><p>{logs.length} aktivitas</p></div></div><div className="data-list">{logs.map((log) => <article className="data-row" key={log.id}><strong>{actionLabel(log.actionCode)}</strong><p className="muted">{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(log.createdAt))}</p></article>)}</div></section></>;
+
+  return (
+    <>
+      <section className="hero">
+        <h1>{ui.adminConsole}</h1>
+        <p>Moderasi toko, dukung penjual, dan kelola penempatan iklan.</p>
+        <button className="button button-text" type="button" onClick={logout}>{ui.logout}</button>
+      </section>
+      {error ? <div className="error-state" role="alert">{error}</div> : null}
+      {message ? <div className="info-state" role="status">{message}</div> : null}
+      <form className="filter-panel" onSubmit={searchSubmit}>
+        <div className="field"><label htmlFor="admin-search">Cari penjual, toko, atau produk</label><input id="admin-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomor telepon atau nama" /></div>
+        <button className="button button-primary" type="submit">{ui.search}</button>
+      </form>
+      <AdsenseSlot placement="ADMIN" />
+      <div className="dashboard-grid">
+        <section>
+          <div className="section-heading"><div><h2>Penjual dan toko</h2><p>{sellers.length} penjual</p></div></div>
+          <div className="data-list">
+            {sellers.length === 0 ? <div className="empty-state">Belum ada data penjual.</div> : sellers.map((seller) => (
+              <article className="data-row" key={seller.id}>
+                <strong>{seller.phone}</strong>
+                <p className="muted">{seller.shop ? `${seller.shop.name} · /${seller.shop.slug}` : "Profil toko belum dibuat"}</p>
+                <span className="status-badge">{seller.shop?.visibilityStatus === "HIDDEN" ? "Toko disembunyikan" : seller.shop ? "Toko tampil" : "Belum ada toko"}</span>
+                <div className="card-actions"><button className="button button-secondary" type="button" onClick={() => pinReset(seller)}>Atur ulang PIN</button>{seller.shop ? <button className="button button-text" type="button" onClick={() => toggleShop(seller)}>{seller.shop.visibilityStatus === "PUBLISHED" ? "Sembunyikan toko" : "Tampilkan toko"}</button> : null}</div>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section>
+          <div className="section-heading"><div><h2>Produk</h2><p>{products.length} produk</p></div></div>
+          <div className="data-list">
+            {products.length === 0 ? <div className="empty-state">Belum ada data produk.</div> : products.map((product) => (
+              <article className="data-row" key={product.id}>
+                <strong>{product.name}</strong>
+                <p className="muted">{product.shopName} · {formatIdr(product.priceIdr)} · {product.primaryCategory.label}</p>
+                <span className={`status-badge${product.visibilityStatus === "HIDDEN" ? " error" : ""}`}>{product.visibilityStatus === "HIDDEN" ? "Disembunyikan" : product.available ? "Tersedia" : "Tidak tersedia"}</span>
+                <button className="button button-text" type="button" onClick={() => toggleProduct(product)}>{product.visibilityStatus === "PUBLISHED" ? "Sembunyikan produk" : "Tampilkan produk"}</button>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+      {ads ? <form className="form-card" onSubmit={saveAds}>
+        <h2>Pengaturan Google AdSense</h2>
+        <label className="checkbox-row"><input type="checkbox" checked={ads.enabled} onChange={(event) => setAds({ ...ads, enabled: event.target.checked })} />Aktifkan iklan</label>
+        <div className="field"><label htmlFor="ads-client">ID klien AdSense</label><input id="ads-client" value={ads.clientId} onChange={(event) => setAds({ ...ads, clientId: event.target.value })} placeholder="ca-pub-..." /></div>
+        {(["HOME", "SHOP", "SELLER", "ADMIN"] as const).map((placement) => <div className="field" key={placement}><label htmlFor={`ads-${placement}`}>Slot {adPlacementLabel(placement)}</label><input id={`ads-${placement}`} value={ads.slots[placement]} onChange={(event) => setAds({ ...ads, slots: { ...ads.slots, [placement]: event.target.value } })} /></div>)}
+        <button className="button button-primary" type="submit">{ui.save}</button>
+      </form> : null}
+      <section>
+        <div className="section-heading"><div><h2>Aktivitas terbaru</h2><p>{logs.length} aktivitas</p></div></div>
+        <div className="data-list">{logs.length === 0 ? <div className="empty-state">Belum ada aktivitas.</div> : logs.map((log) => <article className="data-row" key={log.id}><strong>{actionLabel(log.actionCode)}</strong><p className="muted">{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(log.createdAt))}</p></article>)}</div>
+      </section>
+    </>
+  );
 }

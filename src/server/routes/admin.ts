@@ -1,9 +1,10 @@
 import { authenticateAdmin, getAdsenseSettings, listAdminProducts, listAdminSellers, listAuditLogs, resetSellerPin, setProductVisibility, setShopVisibility, updateAdsenseSettings } from "../admin-service";
 import { clientIp, HttpError, json, methodNotAllowed, readJson } from "../http";
+import { config } from "../../shared/config";
 import { appendCookie, assertCsrf, clearCookie, createAdminSession, requireAdmin, revokeAdminSession, ADMIN_SESSION_COOKIE } from "../session";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "../rate-limit";
 
-const sessionMaxAge = 7 * 24 * 60 * 60;
+const sessionMaxAge = config.sessionDays * 24 * 60 * 60;
 
 function sessionResponse(data: unknown, token: string): Response { return appendCookie(json(data), ADMIN_SESSION_COOKIE, token, sessionMaxAge, true); }
 function booleanBody(body: Record<string, unknown>): boolean { if (typeof body.visible !== "boolean") throw new HttpError(400, "VALIDATION_ERROR", "Visibilitas harus berupa pilihan benar atau salah."); return body.visible; }
@@ -15,11 +16,11 @@ export async function handleAdminRoute(request: Request, segments: string[]): Pr
     if (request.method !== "POST") return methodNotAllowed(["POST"]);
     assertCsrf(request);
     const body = await readJson(request);
-    const rawPhone = typeof body.phone === "string" ? body.phone : "kosong";
-    const key = `${clientIp(request)}:${rawPhone.trim().toLowerCase()}`;
+    const rawEmail = typeof body.email === "string" ? body.email : "kosong";
+    const key = `${clientIp(request)}:${rawEmail.trim().toLowerCase()}`;
     checkLoginRateLimit(key);
     try {
-      const result = await authenticateAdmin(body.phone, body.pin);
+      const result = await authenticateAdmin(body.email, body.password);
       clearLoginFailures(key);
       const token = await createAdminSession(result.adminId);
       return sessionResponse({ adminId: result.adminId }, token);

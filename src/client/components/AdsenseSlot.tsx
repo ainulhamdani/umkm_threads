@@ -4,7 +4,7 @@ import { ui } from "../../shared/i18n";
 
 export function AdsenseSlot({ placement }: { placement: "HOME" | "SHOP" | "SELLER" | "ADMIN" }) {
   const [config, setConfig] = useState<{ enabled: boolean; clientId: string; slotId: string } | null>(null);
-  useEffect(() => { getAdPlacement(placement).then(setConfig).catch((reason: unknown) => console.warn("Konfigurasi iklan tidak dapat dimuat.", reason)); }, [placement]);
+  useEffect(() => { getAdPlacement(placement).then(setConfig).catch((reason: unknown) => { console.warn("Konfigurasi iklan tidak dapat dimuat.", reason); setConfig({ enabled: false, clientId: "", slotId: "" }); }); }, [placement]);
   useEffect(() => {
     if (!config?.enabled) return;
     const scriptSelector = `script[data-adsense-client="${config.clientId}"]`;

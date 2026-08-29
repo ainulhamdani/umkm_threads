@@ -1,10 +1,11 @@
 import { clientIp, HttpError, json, methodNotAllowed, readJson } from "../http";
+import { config } from "../../shared/config";
 import { authenticateSeller, changeSellerPhone, changeSellerPin, createShop, getSellerMe, getSellerShop, registerSeller, updateShop, type ShopMutation } from "../seller-service";
 import { createSellerProduct, listSellerProducts, updateSellerProduct, type ProductMutation } from "../product-service";
 import { appendCookie, assertCsrf, clearCookie, createSellerSession, getSellerSession, requireSeller, revokeAllSellerSessions, revokeSellerSession, SELLER_SESSION_COOKIE } from "../session";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "../rate-limit";
 
-const sessionMaxAge = 7 * 24 * 60 * 60;
+const sessionMaxAge = config.sessionDays * 24 * 60 * 60;
 
 function sessionResponse(data: unknown, token: string): Response {
   return appendCookie(json(data), SELLER_SESSION_COOKIE, token, sessionMaxAge, true);
@@ -32,7 +33,7 @@ export async function handleSellerRoute(request: Request, segments: string[]): P
     assertCsrf(request);
     const body = await readJson(request);
     const rawPhone = typeof body.phone === "string" ? body.phone : "kosong";
-    const key = `${clientIp(request)}:${rawPhone.trim().toLowerCase()}`;
+    const key = `${clientIp(request)}:${rawPhone.trim().replace(/[\s().-]/g, "").toLowerCase()}`;
     checkLoginRateLimit(key);
     try {
       const result = await authenticateSeller(body.phone, body.pin);
@@ -60,7 +61,7 @@ export async function handleSellerRoute(request: Request, segments: string[]): P
   if (resource === "phone" && segments.length === 3) {
     if (request.method !== "PATCH") return methodNotAllowed(["PATCH"]);
     assertCsrf(request);
-    const session = await requireSeller(request);
+    const session = await writableSeller(request);
     const body = await readJson(request);
     await changeSellerPhone(session.sellerId, body.currentPin, body.newPhone);
     const token = await createSellerSession(session.sellerId);
