@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError, getSellerMe, logoutSeller, type SellerMe, type SellerShop } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { PhoneChangeForm, PinChangeForm } from "../components/AccountSecurityForms";
+import { ProductEditor } from "../components/ProductEditor";
 import { ProductManager } from "../components/ProductManager";
 import { ShopForm } from "../components/ShopForm";
 import { BrandMark } from "../components/BrandMark";
@@ -10,7 +11,7 @@ import { ui } from "../../shared/i18n";
 
 export type SellerSection = "overview" | "shop" | "products" | "phone" | "pin";
 
-type Props = { setupMode?: boolean; section?: SellerSection };
+type Props = { setupMode?: boolean; section?: SellerSection; productMode?: "create" | "edit"; productId?: number };
 
 function navigate(path: string) {
   window.history.pushState({}, "", path);
@@ -112,7 +113,7 @@ function pageCopy(section: SellerSection): { title: string; description: string 
   return { title: ui.sellerDashboard, description: "Lihat status toko dan kelola katalog melalui menu penjual." };
 }
 
-export function SellerDashboardPage({ setupMode = false, section = "overview" }: Props) {
+export function SellerDashboardPage({ setupMode = false, section = "overview", productMode, productId }: Props) {
   const [me, setMe] = useState<SellerMe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,6 +175,28 @@ export function SellerDashboardPage({ setupMode = false, section = "overview" }:
         <ShopForm shop={null} onSaved={savedShop} />
       </SellerPageLayout>
     );
+  }
+
+  if (productMode) {
+    const productTitle = productMode === "edit" ? "Edit produk" : "Tambah produk";
+    const productDescription = productMode === "edit" ? "Perbarui informasi produk yang tampil di katalog toko Anda." : "Tambahkan produk baru ke katalog toko Anda.";
+    const editorProductId = productMode === "edit" ? productId : undefined;
+    const productContent = !me.shop ? (
+      <div className="info-state">
+        <h2>Profil toko belum dibuat</h2>
+        <p>Buat profil toko terlebih dahulu sebelum menambahkan produk.</p>
+        <a className="button button-primary" href="/seller/setup" data-nav="true"><Icon name="store" size={17} />Buat profil toko</a>
+      </div>
+    ) : productMode === "edit" && editorProductId === undefined ? (
+      <div className="error-state" role="alert">
+        <h2>Produk tidak dapat dibuka</h2>
+        <p>Identitas produk tidak valid.</p>
+        <a className="button button-secondary" href="/seller/products" data-nav="true">Kembali ke produk</a>
+      </div>
+    ) : (
+      <ProductEditor productId={editorProductId} onSaved={() => navigate("/seller/products")} onCancel={() => navigate("/seller/products")} />
+    );
+    return <SellerPageLayout title={productTitle} description={productDescription} activeSection="products" onLogout={logout}>{productContent}</SellerPageLayout>;
   }
 
   const copy = pageCopy(section);

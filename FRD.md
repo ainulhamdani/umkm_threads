@@ -102,7 +102,9 @@ There is no public customer account and no seller self-service superadmin regist
 | `/seller/login` | Public | Seller login. |
 | `/seller/dashboard` | Seller | Seller overview and shop state. |
 | `/seller/shop` | Seller | Shop profile setup and permitted edits. |
-| `/seller/products` | Seller | Product creation, editing, and availability management. |
+| `/seller/products` | Seller | Product list and availability management. |
+| `/seller/products/new` | Seller | Add a product on a dedicated screen. |
+| `/seller/products/{id}/edit` | Seller | Edit one owned product on a dedicated screen. |
 | `/seller/phone` | Seller | Seller phone and WhatsApp number update. |
 | `/seller/pin` | Seller | Seller PIN update and account security. |
 | `/admin/login` | Public | Superadmin login. |
@@ -202,7 +204,7 @@ The dashboard must show:
 
 Seller routes must redirect unauthenticated visitors to `/seller/login`.
 
-The seller experience uses one focused form per page. `/seller/dashboard` is an overview without an edit form, `/seller/shop` contains only the shop profile form, `/seller/products` contains product management, `/seller/phone` contains only the phone-change form, and `/seller/pin` contains only the PIN-change form. The initial `/seller/setup` route contains only the first shop setup form. Seller navigation remains horizontally scrollable on small screens.
+The seller experience uses one focused form per page. `/seller/dashboard` is an overview without an edit form, `/seller/shop` contains only the shop profile form, `/seller/products` contains the product list and availability actions, `/seller/products/new` contains only the add-product form, `/seller/products/{id}/edit` contains only the edit-product form, `/seller/phone` contains only the phone-change form, and `/seller/pin` contains only the PIN-change form. The initial `/seller/setup` route contains only the first shop setup form. Seller navigation remains horizontally scrollable on small screens.
 
 ### 5.6 Shop setup and editing
 

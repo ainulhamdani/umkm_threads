@@ -4,6 +4,8 @@ const app = await Bun.file("src/client/app.tsx").text();
 const home = await Bun.file("src/client/pages/HomePage.tsx").text();
 const locationFilters = await Bun.file("src/client/components/LocationFilters.tsx").text();
 const sellerDashboard = await Bun.file("src/client/pages/SellerDashboardPage.tsx").text();
+const productManager = await Bun.file("src/client/components/ProductManager.tsx").text();
+const productEditor = await Bun.file("src/client/components/ProductEditor.tsx").text();
 const server = await Bun.file("src/server/index.ts").text();
 
 describe("tata letak aplikasi", () => {
@@ -35,5 +37,17 @@ describe("tata letak aplikasi", () => {
     expect(sellerDashboard).toContain('section === "products"');
     expect(sellerDashboard).toContain('section === "phone"');
     expect(sellerDashboard).toContain('section === "pin"');
+  });
+
+  test("membuka tambah dan edit produk pada layar terpisah", () => {
+    expect(app).toContain('path === "/seller/products/new"');
+    expect(app).toContain('^\\/seller\\/products\\/(\\d+)\\/edit$');
+    expect(server).toContain('"/seller/products/new"');
+    expect(server).toContain("isSellerProductEditRoute");
+    expect(productManager).toContain('href="/seller/products/new"');
+    expect(productManager).toContain('href={`/seller/products/${product.id}/edit`}');
+    expect(productManager).not.toContain("<ProductForm");
+    expect(productEditor).toContain("<ProductForm");
+    expect(sellerDashboard).toContain('productMode?: "create" | "edit"');
   });
 });
