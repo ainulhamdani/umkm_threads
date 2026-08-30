@@ -9,6 +9,7 @@ const packageJson = JSON.parse(await Bun.file("package.json").text()) as { devDe
 const clientBuild = await Bun.file("scripts/build-client.ts").text();
 const styleSource = await Bun.file("src/client/styles.css").text();
 const indexHtml = await Bun.file("public/index.html").text();
+const adsTxt = await Bun.file("public/ads.txt").text();
 const server = await Bun.file("src/server/index.ts").text();
 
 describe("CapRover deployment", () => {
@@ -75,5 +76,11 @@ describe("CapRover deployment", () => {
     expect(dockerIgnore).toContain("node_modules/");
     expect(dockerIgnore).toContain("public/assets/");
     expect(dockerIgnore).toContain("storage/uploads/");
+  });
+
+  test("publishes the authorized AdSense seller entry", () => {
+    expect(adsTxt.trim()).toBe("google.com, pub-2229825305310714, DIRECT, f08c47fec0942fa0");
+    expect(server).toContain('url.pathname === "/ads.txt"');
+    expect(server).toContain('"content-type": "text/plain; charset=utf-8"');
   });
 });

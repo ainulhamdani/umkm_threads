@@ -12,6 +12,7 @@ import { RESERVED_SHOP_SLUGS } from "../shared/validation";
 const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
+const adsTxtFile = Bun.file("public/ads.txt");
 const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/seller/products/new", "/seller/phone", "/seller/pin", "/admin/login", "/admin"]);
 
 function isSellerProductEditRoute(pathname: string): boolean {
@@ -74,6 +75,7 @@ const server = Bun.serve({
     if (url.pathname === "/assets/app.js") return new Response(clientBundle, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
+    if (url.pathname === "/ads.txt") return new Response(adsTxtFile, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
     if (url.pathname === "/robots.txt") return robotsResponse();
     if (url.pathname === "/sitemap.xml") {
       try {
