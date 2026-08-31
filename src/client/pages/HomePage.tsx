@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, getCategories, getLocations, listShops, trackEvent } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { LocationFilters } from "../components/LocationFilters";
@@ -6,6 +6,8 @@ import { ShopCard } from "../components/ShopCard";
 import { Icon } from "../components/Icon";
 import { ui } from "../../shared/i18n";
 import type { LocationOption, ProductCategory, ShopSearchParams, ShopSearchResponse } from "../../shared/types";
+
+const SHOP_PAGE_SIZE = 12;
 
 function readFilters(): ShopSearchParams {
   const query = new URLSearchParams(window.location.search);
@@ -39,7 +41,12 @@ export function HomePage() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [result, setResult] = useState<ShopSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const activeRequestKey = useRef("");
+  const requestKey = JSON.stringify(filters);
 
   useEffect(() => {
     const onPopState = () => {
@@ -70,10 +77,46 @@ export function HomePage() {
   }, [filters.cityRegencyCode]);
 
   useEffect(() => {
+    activeRequestKey.current = requestKey;
+    let active = true;
     setLoading(true);
+    setLoadingMore(false);
+    setLoadMoreError(null);
     setError(null);
-    listShops(filters).then(setResult).catch((reason: unknown) => { setResult(null); setError(errorMessage(reason)); }).finally(() => setLoading(false));
-  }, [filters]);
+    setResult(null);
+    listShops({ ...filters, limit: SHOP_PAGE_SIZE }).then((response) => { if (active) setResult(response); }).catch((reason: unknown) => { if (active) { setResult(null); setError(errorMessage(reason)); } }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [filters, requestKey]);
+
+  const nextCursor = result?.nextCursor ?? null;
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loading || loadingMore || activeRequestKey.current !== requestKey) return;
+    const cursor = nextCursor;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      const response = await listShops({ ...filters, cursor, limit: SHOP_PAGE_SIZE });
+      if (activeRequestKey.current !== requestKey) return;
+      setResult((current) => current ? { ...current, resultCount: response.resultCount, nextCursor: response.nextCursor, items: [...current.items, ...response.items] } : current);
+    } catch (reason: unknown) {
+      if (activeRequestKey.current === requestKey) setLoadMoreError(errorMessage(reason));
+    } finally {
+      if (activeRequestKey.current === requestKey) setLoadingMore(false);
+    }
+  }, [filters, loading, loadingMore, nextCursor, requestKey]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !nextCursor || loading || loadingMore || loadMoreError) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        void loadMore();
+      }
+    }, { rootMargin: "320px 0px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, loading, loadingMore, loadMoreError, nextCursor]);
 
   function apply(next: ShopSearchParams) {
     setFilters(writeFilters(next));
@@ -103,10 +146,10 @@ export function HomePage() {
   }, [loading, result, hasFilters]);
   return (
     <>
-      <section className="home-hero">
+      <section className="home-intro">
         <p className="eyebrow">Katalog toko lokal Indonesia</p>
-        <h1>Temukan toko lokal di sekitar Anda</h1>
-        <p>Jelajahi katalog produk UMKM Indonesia dan hubungi penjual langsung melalui WhatsApp.</p>
+        <h1>Temukan produk lokal</h1>
+        <p>Jelajahi katalog UMKM dan hubungi penjual langsung melalui WhatsApp.</p>
       </section>
       <section className="filter-panel" aria-label="Pencarian dan filter toko">
         <form className="home-filter-form" onSubmit={submitSearch}>
@@ -144,10 +187,14 @@ export function HomePage() {
       <AdsenseSlot placement="HOME" />
       <section aria-labelledby="shop-list-heading">
         <div className="section-heading"><div><h2 id="shop-list-heading">{ui.shops}</h2>{result ? <p>{result.resultCount} toko ditemukan</p> : null}</div></div>
-        {loading ? <div className="loading-state" aria-live="polite">{ui.loading}</div> : null}
+        {loading && !result ? <div className="loading-state" aria-live="polite">{ui.loading}</div> : null}
         {error ? <div className="error-state" role="alert">{error}</div> : null}
         {!loading && !error && result && result.items.length === 0 ? <div className="empty-state">{hasFilters ? ui.noResults : ui.noShops}</div> : null}
         {!loading && !error && result && result.items.length > 0 ? <div className="shop-grid">{result.items.map((item) => <ShopCard key={item.shop.id} item={item} />)}</div> : null}
+        {!loading && !error && result && result.items.length > 0 && result.nextCursor ? <div ref={loadMoreRef} className="infinite-load-state" aria-live="polite">
+          {loadingMore ? <><span className="loading-spinner" aria-hidden="true" />Memuat toko lainnya...</> : loadMoreError ? <><span role="alert">{loadMoreError}</span><button className="button button-text" type="button" onClick={() => void loadMore()}>Coba lagi</button></> : <span>Gulir untuk memuat toko lainnya</span>}
+        </div> : null}
+        {!loading && !error && result && result.items.length > 0 && !result.nextCursor ? <p className="infinite-end-state">Semua toko telah ditampilkan.</p> : null}
       </section>
     </>
   );

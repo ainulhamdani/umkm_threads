@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 const app = await Bun.file("src/client/app.tsx").text();
 const home = await Bun.file("src/client/pages/HomePage.tsx").text();
+const clientStyles = await Bun.file("src/client/styles.css").text();
 const locationFilters = await Bun.file("src/client/components/LocationFilters.tsx").text();
 const sellerDashboard = await Bun.file("src/client/pages/SellerDashboardPage.tsx").text();
 const productManager = await Bun.file("src/client/components/ProductManager.tsx").text();
@@ -23,6 +24,25 @@ describe("tata letak aplikasi", () => {
     expect(home).toContain('className="filter-scroll"');
     expect(home).toContain('className="filter-row"');
     expect(locationFilters).toContain('className="location-filter-row"');
+  });
+
+  test("memuat daftar toko bertahap tanpa kartu hero", () => {
+    expect(home).not.toContain('className="home-hero"');
+    expect(home).toContain("SHOP_PAGE_SIZE");
+    expect(home).toContain("IntersectionObserver");
+    expect(home).toContain("cursor");
+    expect(home).toContain("Memuat toko lainnya");
+    expect(clientStyles).toContain(".infinite-load-state");
+    expect(clientStyles).not.toContain(".home-hero");
+  });
+
+  test("menjaga tombol masuk dan daftar tetap terlihat di mobile", () => {
+    expect(app).toContain('href="/seller/login"');
+    expect(app).toContain('href="/seller/register"');
+    expect(app).toContain("public-header-register-short");
+    expect(app).not.toContain('public-header-register-short" aria-hidden="true"');
+    expect(clientStyles).toContain(".public-header-register-short { display: inline; }");
+    expect(clientStyles).not.toContain(".public-header-link { width: 40px; padding: 0; font-size: 0; }");
   });
 
   test("memiliki halaman terpisah untuk setiap formulir penjual", () => {

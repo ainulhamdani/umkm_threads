@@ -23,8 +23,8 @@ function PublicHeader() {
       <div className="mx-auto flex min-h-[72px] w-[calc(100%-32px)] max-w-[1120px] items-center justify-between gap-3">
         <a className="min-w-0 shrink text-brand-900 no-underline" href="/" data-nav="true"><BrandMark subtitle={ui.appTagline} /></a>
         <nav className="flex shrink-0 items-center gap-1 sm:gap-2" aria-label="Navigasi utama">
-          <a className="public-header-link" href="/seller/login" data-nav="true"><Icon name="lock" size={17} />{ui.login}</a>
-          <a className="public-header-cta" href="/seller/register" data-nav="true">{ui.register}</a>
+          <a className="public-header-link" href="/seller/login" data-nav="true"><Icon name="lock" size={17} /><span>{ui.login}</span></a>
+          <a className="public-header-cta" href="/seller/register" data-nav="true"><span className="public-header-register-full">{ui.register}</span><span className="public-header-register-short">Daftar</span></a>
         </nav>
       </div>
     </header>
