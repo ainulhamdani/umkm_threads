@@ -16,6 +16,7 @@ describe("validasi marketplace", () => {
   test("menolak slug jalur aplikasi", () => {
     expect(validateShopSlug("seller")).not.toEqual([]);
     expect(validateShopSlug("sitemap.xml")).not.toEqual([]);
+    expect(validateShopSlug("favicon.svg")).not.toEqual([]);
     expect(validateShopSlug("toko-bagus")).toEqual([]);
   });
 

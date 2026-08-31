@@ -3,6 +3,7 @@ export const RESERVED_SHOP_SLUGS = new Set([
   "admin",
   "assets",
   "favicon.ico",
+  "favicon.svg",
   "health",
   "login",
   "media",

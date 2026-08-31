@@ -252,7 +252,7 @@ Google AdSense is the MVP monetization mechanism.
 
 - Public shop URLs use `/{shopSlug}`.
 - Slugs use lowercase URL-safe characters and hyphens. Consecutive separators are normalized.
-- The system reserves paths used by the application, including `seller`, `admin`, `api`, `media`, `favicon.ico`, `robots.txt`, and `sitemap.xml`.
+- The system reserves paths used by the application, including `seller`, `admin`, `api`, `media`, `favicon.ico`, `favicon.svg`, `robots.txt`, and `sitemap.xml`.
 - A slug is checked for uniqueness without regard to letter case.
 - A slug cannot be changed by the seller or superadmin through the normal UI.
 - Public shop pages expose canonical URLs and Open Graph metadata for sharing.

@@ -10,6 +10,7 @@ const clientBuild = await Bun.file("scripts/build-client.ts").text();
 const styleSource = await Bun.file("src/client/styles.css").text();
 const indexHtml = await Bun.file("public/index.html").text();
 const adsTxt = await Bun.file("public/ads.txt").text();
+const favicon = await Bun.file("public/favicon.svg").text();
 const server = await Bun.file("src/server/index.ts").text();
 
 describe("CapRover deployment", () => {
@@ -82,5 +83,12 @@ describe("CapRover deployment", () => {
     expect(adsTxt.trim()).toBe("google.com, pub-2229825305310714, DIRECT, f08c47fec0942fa0");
     expect(server).toContain('url.pathname === "/ads.txt"');
     expect(server).toContain('"content-type": "text/plain; charset=utf-8"');
+  });
+
+  test("publishes the application favicon", () => {
+    expect(indexHtml).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />');
+    expect(favicon).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(server).toContain('url.pathname === "/favicon.svg"');
+    expect(server).toContain('"content-type": "image/svg+xml; charset=utf-8"');
   });
 });

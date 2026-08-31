@@ -13,6 +13,7 @@ const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
 const adsTxtFile = Bun.file("public/ads.txt");
+const faviconFile = Bun.file("public/favicon.svg");
 const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/seller/products/new", "/seller/phone", "/seller/pin", "/admin/login", "/admin", "/admin/sellers", "/admin/shops", "/admin/products", "/admin/adsense", "/admin/activity"]);
 
 function isSellerProductEditRoute(pathname: string): boolean {
@@ -76,6 +77,7 @@ const server = Bun.serve({
     if (url.pathname === "/assets/app.js.map") return new Response(Bun.file("public/assets/app.js.map"), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/styles.css") return new Response(stylesFile, { headers: { "content-type": "text/css; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/ads.txt") return new Response(adsTxtFile, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" } });
+    if (url.pathname === "/favicon.svg") return new Response(faviconFile, { headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=31536000, immutable" } });
     if (url.pathname === "/robots.txt") return robotsResponse();
     if (url.pathname === "/sitemap.xml") {
       try {

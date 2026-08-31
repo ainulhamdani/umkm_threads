@@ -123,7 +123,7 @@ Product details are rendered on `/{shopSlug}`. A separate product page is not re
 
 The following exact or normalized path segments cannot be shop slugs:
 
-`seller`, `admin`, `api`, `media`, `favicon.ico`, `robots.txt`, `sitemap.xml`, `login`, `register`, and `undefined`.
+`seller`, `admin`, `api`, `media`, `favicon.ico`, `favicon.svg`, `robots.txt`, `sitemap.xml`, `login`, `register`, and `undefined`.
 
 The reserved list must be maintained in one shared server and client validation module. A reserved path must return the application route, not a shop lookup.
 

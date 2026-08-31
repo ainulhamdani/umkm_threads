@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Threads UMKM</title>
+  <rect width="64" height="64" rx="16" fill="#6750a4"/>
+  <path d="M12 27 16.5 14h31L52 27v3.2c0 2.8-2.2 5.1-5 5.1-2.2 0-4.1-1.4-4.8-3.3-.7 1.9-2.6 3.3-4.8 3.3s-4.1-1.4-4.8-3.3c-.7 1.9-2.6 3.3-4.8 3.3S24.7 33.9 24 32c-.7 1.9-2.6 3.3-4.8 3.3-2.8 0-5-2.3-5-5.1z" fill="#fff"/>
+  <path d="M17 35h30v15H17z" fill="#fff"/>
+  <path d="M22 40h7v10h-7zM34 40h8v10h-8z" fill="#6750a4"/>
+</svg>
