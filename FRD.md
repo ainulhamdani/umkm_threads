@@ -693,7 +693,25 @@ The media endpoint accepts `multipart/form-data`, while all metadata and mutatio
 | `PATCH` | `/api/admin/products/{id}/visibility` | Hide or restore a product. |
 | `GET` | `/api/admin/adsense` | Return current AdSense configuration to the superadmin UI. |
 | `PATCH` | `/api/admin/adsense` | Update AdSense client and route slot identifiers. |
-| `GET` | `/api/admin/audit-logs` | Return paginated safe audit activity. |
+| `GET` | `/api/admin/audit-logs?page=1` | Return one paginated page of safe audit activity. |
+
+The audit-log response uses a fixed page size of 25 records and returns the newest records first using `created_at DESC, id DESC` ordering:
+
+```json
+{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "pageSize": 25,
+    "totalItems": 0,
+    "totalPages": 1,
+    "hasPrevious": false,
+    "hasNext": false
+  }
+}
+```
+
+`page` is an optional positive integer. Invalid values return `400 INVALID_PAGE`. A page beyond the final page is clamped to the last available page.
 
 ## 8. Validation rules
 
@@ -1038,8 +1056,9 @@ Analytics event names remain technical identifiers and are not shown to users.
 25. A superadmin resets a seller PIN and the old session no longer works.
 26. A seller attempts to modify AdSense settings and receives a forbidden response.
 27. AdSense slots render on public, seller, and superadmin pages when enabled.
-28. Invalid images are rejected before they become shop or product media.
-29. The primary mobile layout uses Material components and keeps all key controls at least 48px.
+28. A superadmin moves between activity-log pages and sees the correct records, total count, and disabled first or last navigation control.
+29. Invalid images are rejected before they become shop or product media.
+30. The primary mobile layout uses Material components and keeps all key controls at least 48px.
 
 ### 17.4 Quality checks
 

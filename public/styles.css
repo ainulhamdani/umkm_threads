@@ -2244,6 +2244,23 @@ h1, h2, h3 {
   color: var(--md-outline);
   font-size: 0.7rem;
 }
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--md-outline-variant);
+}
+.admin-pagination-status {
+  flex: 1 1 100%;
+  order: -1;
+  color: var(--md-outline);
+  font-size: 0.78rem;
+  text-align: center;
+}
 .not-found-page {
   display: grid;
   justify-items: center;
@@ -2353,6 +2370,10 @@ h1, h2, h3 {
   .admin-panel-grid {
     grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
     align-items: start;
+  }
+  .admin-pagination-status {
+    flex: 0 1 auto;
+    order: 0;
   }
 }
 @media (min-width: 900px) {

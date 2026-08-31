@@ -8,6 +8,14 @@ const sessionMaxAge = config.sessionDays * 24 * 60 * 60;
 
 function sessionResponse(data: unknown, token: string): Response { return appendCookie(json(data), ADMIN_SESSION_COOKIE, token, sessionMaxAge, true); }
 function booleanBody(body: Record<string, unknown>): boolean { if (typeof body.visible !== "boolean") throw new HttpError(400, "VALIDATION_ERROR", "Visibilitas harus berupa pilihan benar atau salah."); return body.visible; }
+function auditLogPage(request: Request): number {
+  const rawPage = new URL(request.url).searchParams.get("page");
+  if (rawPage === null) return 1;
+  if (!/^\d+$/.test(rawPage)) throw new HttpError(400, "INVALID_PAGE", "Nomor halaman harus berupa bilangan bulat positif.");
+  const page = Number(rawPage);
+  if (!Number.isSafeInteger(page) || page < 1) throw new HttpError(400, "INVALID_PAGE", "Nomor halaman harus berupa bilangan bulat positif.");
+  return page;
+}
 
 export async function handleAdminRoute(request: Request, segments: string[]): Promise<Response> {
   const resource = segments[2];
@@ -69,7 +77,7 @@ export async function handleAdminRoute(request: Request, segments: string[]): Pr
   }
   if (resource === "audit-logs" && segments.length === 3) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
-    return json({ items: await listAuditLogs() });
+    return json(await listAuditLogs(auditLogPage(request)));
   }
   throw new HttpError(404, "NOT_FOUND", "Rute superadmin tidak ditemukan.");
 }

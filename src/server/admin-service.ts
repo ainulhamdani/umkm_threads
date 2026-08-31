@@ -115,7 +115,17 @@ export async function updateAdsenseSettings(adminId: number, input: Record<strin
   return getAdsenseSettings();
 }
 
-export async function listAuditLogs(): Promise<unknown[]> {
-  const [rows] = await db.execute<RowDataPacket[]>("SELECT id, actor_type, actor_id, action_code, target_type, target_id, metadata_json, created_at FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT 100");
-  return rows.map((row) => ({ id: Number(row.id), actorType: String(row.actor_type), actorId: row.actor_id === null ? null : Number(row.actor_id), actionCode: String(row.action_code), targetType: row.target_type ? String(row.target_type) : null, targetId: row.target_id === null ? null : Number(row.target_id), metadata: typeof row.metadata_json === "string" ? JSON.parse(row.metadata_json) : row.metadata_json, createdAt: String(row.created_at) }));
+const auditLogPageSize = 25;
+
+export async function listAuditLogs(page: number): Promise<{ items: unknown[]; pagination: { page: number; pageSize: number; totalItems: number; totalPages: number; hasPrevious: boolean; hasNext: boolean } }> {
+  const [countRows] = await db.execute<RowDataPacket[]>("SELECT COUNT(*) AS total_items FROM audit_logs");
+  const totalItems = Number(countRows[0]?.total_items ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalItems / auditLogPageSize));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * auditLogPageSize;
+  const [rows] = await db.execute<RowDataPacket[]>(`SELECT id, actor_type, actor_id, action_code, target_type, target_id, metadata_json, created_at FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT ${auditLogPageSize} OFFSET ${offset}`);
+  return {
+    items: rows.map((row) => ({ id: Number(row.id), actorType: String(row.actor_type), actorId: row.actor_id === null ? null : Number(row.actor_id), actionCode: String(row.action_code), targetType: row.target_type ? String(row.target_type) : null, targetId: row.target_id === null ? null : Number(row.target_id), metadata: typeof row.metadata_json === "string" ? JSON.parse(row.metadata_json) : row.metadata_json, createdAt: String(row.created_at) })),
+    pagination: { page: currentPage, pageSize: auditLogPageSize, totalItems, totalPages, hasPrevious: currentPage > 1, hasNext: currentPage < totalPages },
+  };
 }

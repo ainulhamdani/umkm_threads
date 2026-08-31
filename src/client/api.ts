@@ -151,4 +151,5 @@ export function resetSellerPin(id: number): Promise<{ temporaryPin: string }> { 
 export function getAdminAdsense(): Promise<AdsenseSettings> { return request<AdsenseSettings>("/api/admin/adsense"); }
 export function updateAdminAdsense(input: AdsenseSettings): Promise<AdsenseSettings> { return request<AdsenseSettings>("/api/admin/adsense", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(input) }); }
 export type AuditLog = { id: number; actorType: string; actorId: number | null; actionCode: string; targetType: string | null; targetId: number | null; metadata: unknown; createdAt: string };
-export function listAuditLogs(): Promise<{ items: AuditLog[] }> { return request<{ items: AuditLog[] }>("/api/admin/audit-logs"); }
+export type AuditLogPagination = { page: number; pageSize: number; totalItems: number; totalPages: number; hasPrevious: boolean; hasNext: boolean };
+export function listAuditLogs(page = 1): Promise<{ items: AuditLog[]; pagination: AuditLogPagination }> { return request<{ items: AuditLog[]; pagination: AuditLogPagination }>(`/api/admin/audit-logs?page=${page}`); }

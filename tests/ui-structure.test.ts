@@ -8,6 +8,9 @@ const productManager = await Bun.file("src/client/components/ProductManager.tsx"
 const productEditor = await Bun.file("src/client/components/ProductEditor.tsx").text();
 const server = await Bun.file("src/server/index.ts").text();
 const adsenseSlot = await Bun.file("src/client/components/AdsenseSlot.tsx").text();
+const adminApi = await Bun.file("src/client/api.ts").text();
+const adminRoute = await Bun.file("src/server/routes/admin.ts").text();
+const adminService = await Bun.file("src/server/admin-service.ts").text();
 
 describe("tata letak aplikasi", () => {
   test("menggunakan utilitas Tailwind pada shell publik", () => {
@@ -76,6 +79,19 @@ describe("tata letak aplikasi", () => {
     expect(adminLayout).toContain('<AdsenseSlot placement="ADMIN" showUnavailable />');
     expect(home).not.toContain("showUnavailable");
     expect(sellerDashboard).not.toContain("showUnavailable");
+  });
+
+  test("memiliki paginasi pada log aktivitas superadmin", () => {
+    expect(adminApi).toContain("listAuditLogs(page = 1)");
+    expect(adminApi).toContain("/api/admin/audit-logs?page=");
+    expect(adminRoute).toContain('searchParams.get("page")');
+    expect(adminRoute).toContain('"INVALID_PAGE"');
+    expect(adminService).toContain("COUNT(*) AS total_items");
+    expect(adminService).toContain("LIMIT ${auditLogPageSize} OFFSET ${offset}");
+    expect(adminActivity).toContain("listAuditLogs(page)");
+    expect(adminActivity).toContain('className="admin-pagination"');
+    expect(adminActivity).toContain("Sebelumnya");
+    expect(adminActivity).toContain("Berikutnya");
   });
 });
 const adminPage = await Bun.file("src/client/pages/AdminPage.tsx").text();
