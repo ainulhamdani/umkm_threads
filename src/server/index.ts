@@ -13,7 +13,7 @@ const htmlFile = Bun.file("public/index.html");
 const clientBundle = Bun.file("public/assets/app.js");
 const stylesFile = Bun.file("public/styles.css");
 const adsTxtFile = Bun.file("public/ads.txt");
-const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/seller/products/new", "/seller/phone", "/seller/pin", "/admin/login", "/admin"]);
+const APPLICATION_ROUTES = new Set(["/", "/seller/login", "/seller/register", "/seller/setup", "/seller/dashboard", "/seller/shop", "/seller/products", "/seller/products/new", "/seller/phone", "/seller/pin", "/admin/login", "/admin", "/admin/sellers", "/admin/shops", "/admin/products", "/admin/adsense", "/admin/activity"]);
 
 function isSellerProductEditRoute(pathname: string): boolean {
   return /^\/seller\/products\/\d+\/edit$/.test(pathname);

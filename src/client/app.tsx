@@ -7,6 +7,11 @@ import { SellerAuthPage } from "./pages/SellerAuthPage";
 import { SellerDashboardPage } from "./pages/SellerDashboardPage";
 import { AdminAuthPage } from "./pages/AdminAuthPage";
 import { AdminPage } from "./pages/AdminPage";
+import { AdminSellersPage } from "./pages/AdminSellersPage";
+import { AdminShopsPage } from "./pages/AdminShopsPage";
+import { AdminProductsPage } from "./pages/AdminProductsPage";
+import { AdminAdsensePage } from "./pages/AdminAdsensePage";
+import { AdminActivityPage } from "./pages/AdminActivityPage";
 import { AdsenseSlot } from "./components/AdsenseSlot";
 import { BrandMark } from "./components/BrandMark";
 import { Icon } from "./components/Icon";
@@ -76,6 +81,6 @@ export function App() {
   }, [path]);
 
   const sellerProductEditMatch = /^\/seller\/products\/(\d+)\/edit$/.exec(path);
-  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/seller/shop" ? <SellerDashboardPage section="shop" /> : path === "/seller/products/new" ? <SellerDashboardPage section="products" productMode="create" /> : sellerProductEditMatch ? <SellerDashboardPage section="products" productMode="edit" productId={Number(sellerProductEditMatch[1])} /> : path === "/seller/products" ? <SellerDashboardPage section="products" /> : path === "/seller/phone" ? <SellerDashboardPage section="phone" /> : path === "/seller/pin" ? <SellerDashboardPage section="pin" /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <><NotFound /><AdsenseSlot placement="HOME" /></>;
+  const content = path === "/" ? <HomePage /> : path === "/seller/login" ? <SellerAuthPage mode="login" /> : path === "/seller/register" ? <SellerAuthPage mode="register" /> : path === "/seller/setup" ? <SellerDashboardPage setupMode /> : path === "/seller/dashboard" ? <SellerDashboardPage /> : path === "/seller/shop" ? <SellerDashboardPage section="shop" /> : path === "/seller/products/new" ? <SellerDashboardPage section="products" productMode="create" /> : sellerProductEditMatch ? <SellerDashboardPage section="products" productMode="edit" productId={Number(sellerProductEditMatch[1])} /> : path === "/seller/products" ? <SellerDashboardPage section="products" /> : path === "/seller/phone" ? <SellerDashboardPage section="phone" /> : path === "/seller/pin" ? <SellerDashboardPage section="pin" /> : path === "/admin/login" ? <AdminAuthPage /> : path === "/admin" ? <AdminPage /> : path === "/admin/sellers" ? <AdminSellersPage /> : path === "/admin/shops" ? <AdminShopsPage /> : path === "/admin/products" ? <AdminProductsPage /> : path === "/admin/adsense" ? <AdminAdsensePage /> : path === "/admin/activity" ? <AdminActivityPage /> : isShopPath(path) ? <ShopPage slug={path.slice(1)} /> : <><NotFound /><AdsenseSlot placement="HOME" /></>;
   return <AppShell pathname={path}>{content}</AppShell>;
 }

@@ -7,6 +7,7 @@ const sellerDashboard = await Bun.file("src/client/pages/SellerDashboardPage.tsx
 const productManager = await Bun.file("src/client/components/ProductManager.tsx").text();
 const productEditor = await Bun.file("src/client/components/ProductEditor.tsx").text();
 const server = await Bun.file("src/server/index.ts").text();
+const adsenseSlot = await Bun.file("src/client/components/AdsenseSlot.tsx").text();
 
 describe("tata letak aplikasi", () => {
   test("menggunakan utilitas Tailwind pada shell publik", () => {
@@ -50,4 +51,37 @@ describe("tata letak aplikasi", () => {
     expect(productEditor).toContain("<ProductForm");
     expect(sellerDashboard).toContain('productMode?: "create" | "edit"');
   });
+
+  test("memisahkan halaman superadmin berdasarkan rute", () => {
+    for (const route of ["/admin/sellers", "/admin/shops", "/admin/products", "/admin/adsense", "/admin/activity"]) {
+      expect(app).toContain(`path === "${route}"`);
+      expect(server).toContain(`"${route}"`);
+    }
+    expect(adminLayout).toContain("AdminNavigation");
+    expect(adminLayout).toContain("admin-mobile-navigation");
+    expect(adminPage).toContain('activeSection="overview"');
+    expect(adminSellers).toContain('activeSection="sellers"');
+    expect(adminShops).toContain('activeSection="shops"');
+    expect(adminProducts).toContain('activeSection="products"');
+    expect(adminAdsense).toContain('activeSection="adsense"');
+    expect(adminActivity).toContain('activeSection="activity"');
+    expect(adminLayout).not.toContain('href="#sellers"');
+    expect(adminLayout).not.toContain('href="#products"');
+  });
+
+  test("menyembunyikan iklan yang belum dikonfigurasi dari pengguna non-superadmin", () => {
+    expect(adsenseSlot).toContain("showUnavailable = false");
+    expect(adsenseSlot).toContain("if (!config) return showUnavailable ?");
+    expect(adsenseSlot).toContain("if (!config.enabled) return showUnavailable ?");
+    expect(adminLayout).toContain('<AdsenseSlot placement="ADMIN" showUnavailable />');
+    expect(home).not.toContain("showUnavailable");
+    expect(sellerDashboard).not.toContain("showUnavailable");
+  });
 });
+const adminPage = await Bun.file("src/client/pages/AdminPage.tsx").text();
+const adminLayout = await Bun.file("src/client/components/AdminPageLayout.tsx").text();
+const adminSellers = await Bun.file("src/client/pages/AdminSellersPage.tsx").text();
+const adminShops = await Bun.file("src/client/pages/AdminShopsPage.tsx").text();
+const adminProducts = await Bun.file("src/client/pages/AdminProductsPage.tsx").text();
+const adminAdsense = await Bun.file("src/client/pages/AdminAdsensePage.tsx").text();
+const adminActivity = await Bun.file("src/client/pages/AdminActivityPage.tsx").text();

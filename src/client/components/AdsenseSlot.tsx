@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getAdPlacement } from "../api";
 import { ui } from "../../shared/i18n";
 
-export function AdsenseSlot({ placement }: { placement: "HOME" | "SHOP" | "SELLER" | "ADMIN" }) {
+export function AdsenseSlot({ placement, showUnavailable = false }: { placement: "HOME" | "SHOP" | "SELLER" | "ADMIN"; showUnavailable?: boolean }) {
   const [config, setConfig] = useState<{ enabled: boolean; clientId: string; slotId: string } | null>(null);
   useEffect(() => { getAdPlacement(placement).then(setConfig).catch((reason: unknown) => { console.warn("Konfigurasi iklan tidak dapat dimuat.", reason); setConfig({ enabled: false, clientId: "", slotId: "" }); }); }, [placement]);
   useEffect(() => {
@@ -20,7 +20,8 @@ export function AdsenseSlot({ placement }: { placement: "HOME" | "SHOP" | "SELLE
     ads.push({});
     (window as Window & { adsbygoogle?: unknown[] }).adsbygoogle = ads;
   }, [config]);
-  if (!config?.enabled) return <aside className="ad-slot" aria-label={ui.adsLabel}><span>{config ? ui.adsUnavailable : ui.loading}</span></aside>;
+  if (!config) return showUnavailable ? <aside className="ad-slot" aria-label={ui.adsLabel}><span>{ui.loading}</span></aside> : null;
+  if (!config.enabled) return showUnavailable ? <aside className="ad-slot" aria-label={ui.adsLabel}><span>{ui.adsUnavailable}</span></aside> : null;
   return (
     <aside className="ad-slot" aria-label={ui.adsLabel}>
       <ins className="adsbygoogle" style={{ display: "block", width: "100%" }} data-ad-client={config.clientId} data-ad-slot={config.slotId} data-ad-format="auto" data-full-width-responsive="true" />

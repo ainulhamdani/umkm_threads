@@ -108,7 +108,12 @@ There is no public customer account and no seller self-service superadmin regist
 | `/seller/phone` | Seller | Seller phone and WhatsApp number update. |
 | `/seller/pin` | Seller | Seller PIN update and account security. |
 | `/admin/login` | Public | Superadmin login. |
-| `/admin` | Superadmin | Moderation, seller support, and AdSense configuration. |
+| `/admin` | Superadmin | Platform overview and links to each administration area. |
+| `/admin/sellers` | Superadmin | Seller support and PIN reset management. |
+| `/admin/shops` | Superadmin | Shop visibility moderation. |
+| `/admin/products` | Superadmin | Product visibility moderation. |
+| `/admin/adsense` | Superadmin | AdSense client and slot configuration. |
+| `/admin/activity` | Superadmin | Audit activity review. |
 | `/robots.txt` | Public | Search crawler rules. |
 | `/sitemap.xml` | Public | Public shop URL discovery. |
 
@@ -252,12 +257,14 @@ Product deletion is not required. A seller makes a product unavailable instead. 
 
 The console must provide:
 
-- Lists of sellers, shops, and products.
-- Search by phone, shop name, slug, or product name within the loaded data set.
-- Hide and restore controls for shops and products.
-- Seller PIN reset control.
-- Audit activity for moderation, PIN reset, and AdSense changes.
-- AdSense client and slot configuration.
+- `/admin` as a summary-only overview with platform counts and links to each administration area.
+- `/admin/sellers` as the seller support page with seller search and PIN reset control.
+- `/admin/shops` as the shop moderation page with shop search and hide or restore controls.
+- `/admin/products` as the product moderation page with product search and hide or restore controls.
+- `/admin/adsense` as the AdSense configuration page for client and route-specific slot identifiers.
+- `/admin/activity` as the audit activity page for moderation, PIN reset, and AdSense changes.
+- One focused administration concern per page. The page must not depend on hash anchors to reach another concern.
+- A shared route-aware desktop sidebar and mobile navigation drawer with the active page indicated.
 
 The console has one application role, `SUPERADMIN`. Unauthenticated visitors must be redirected to `/admin/login`. Sellers must receive a forbidden response if they call admin APIs.
 
@@ -873,7 +880,8 @@ The component reads the active settings and does not provide seller-level config
 - Only a superadmin can read or update AdSense settings through the admin UI.
 - Client and slot values are validated as non-empty safe identifiers before save.
 - The `enabled` flag controls whether configured placements render.
-- Missing or disabled configuration produces an intentional empty slot state, not an invented default identifier.
+- Missing or disabled configuration renders no card and no ad on public, seller, or admin-login pages.
+- The authenticated superadmin console shows the Bahasa Indonesia status card `Iklan belum dikonfigurasi.` when the configuration is missing or disabled.
 - AdSense scripts must load according to Google's integration requirements and must not block core catalog or cart behavior.
 - Production launch requires `ads.txt`, required privacy disclosures, and any applicable consent mechanism.
 
