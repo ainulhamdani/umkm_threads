@@ -41,6 +41,10 @@ export type ProductSummary = {
   available: boolean;
 };
 
+export type PublicProduct = ProductSummary & {
+  shop: ShopSummary;
+};
+
 export type SellerProduct = {
   id: number;
   mediaId: number;
@@ -69,12 +73,20 @@ export type ShopSearchItem = {
   matchingProducts: ProductSummary[];
 };
 
-export type ShopSearchParams = {
+export type PublicSearchParams = {
   q?: string;
   provinceCode?: string;
   cityRegencyCode?: string;
   districtCode?: string;
   categoryCode?: string;
+};
+
+export type ShopSearchParams = PublicSearchParams & {
+  cursor?: string;
+  limit?: number;
+};
+
+export type ProductSearchParams = PublicSearchParams & {
   cursor?: string;
   limit?: number;
 };
@@ -84,6 +96,13 @@ export type ShopSearchResponse = {
   resultCount: number;
   nextCursor: string | null;
   items: ShopSearchItem[];
+};
+
+export type ProductSearchResponse = {
+  appliedFilters: ProductSearchParams;
+  resultCount: number;
+  nextCursor: string | null;
+  items: PublicProduct[];
 };
 
 export type PublicShop = ShopSummary & {

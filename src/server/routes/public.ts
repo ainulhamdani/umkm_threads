@@ -1,6 +1,6 @@
 import type { LocationLevel, ShopSearchParams } from "../../shared/types";
 import { getPublicAdPlacement, type AdPlacement } from "../admin-service";
-import { createWhatsAppLink, listCategories, listLocations, listPublicShops, getPublicShop, type WhatsAppItemInput } from "../public-service";
+import { createWhatsAppLink, listCategories, listLocations, listPublicProducts, listPublicShops, getPublicShop, type WhatsAppItemInput } from "../public-service";
 import { HttpError, json, methodNotAllowed, readJson } from "../http";
 import { appendCookie, assertCsrf, CSRF_COOKIE, issueCsrfToken } from "../session";
 import { recordAudit, recordAuditSafely } from "../audit";
@@ -82,6 +82,10 @@ export async function handlePublicRoute(request: Request, url: URL, segments: st
   if (segments[1] === "shops" && segments.length === 2) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     return json(await listPublicShops(searchFromUrl(url)));
+  }
+  if (segments[1] === "products" && segments.length === 2) {
+    if (request.method !== "GET") return methodNotAllowed(["GET"]);
+    return json(await listPublicProducts(searchFromUrl(url)));
   }
   if (segments[1] === "shops" && segments.length === 3) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);

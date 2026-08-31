@@ -25,6 +25,7 @@ export const ui = {
   save: "Simpan",
   cancel: "Batal",
   loading: "Memuat...",
+  retry: "Coba lagi",
   uploading: "Mengunggah foto...",
   saving: "Menyimpan...",
   noShops: "Belum ada toko yang dapat ditampilkan.",

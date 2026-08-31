@@ -1,8 +1,8 @@
-import type { LocationOption, ShopSearchParams } from "../../shared/types";
+import type { LocationOption, PublicSearchParams } from "../../shared/types";
 import { ui } from "../../shared/i18n";
 
 type Props = {
-  filters: ShopSearchParams;
+  filters: PublicSearchParams;
   provinces: LocationOption[];
   cities: LocationOption[];
   districts: LocationOption[];

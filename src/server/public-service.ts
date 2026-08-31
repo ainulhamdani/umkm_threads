@@ -1,6 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { getCategory } from "../shared/categories";
-import type { LocationLevel, LocationOption, ProductSummary, PublicShop, ShopAddress, ShopSearchItem, ShopSearchParams, ShopSearchResponse, ShopSummary } from "../shared/types";
+import type { LocationLevel, LocationOption, ProductSearchParams, ProductSearchResponse, ProductSummary, PublicProduct, PublicSearchParams, PublicShop, ShopAddress, ShopSearchItem, ShopSearchParams, ShopSearchResponse, ShopSummary } from "../shared/types";
 import { normalizeIndonesianPhone, validateShopSlug } from "../shared/validation";
 import { HttpError } from "./http";
 import { db } from "./db";
@@ -35,6 +35,18 @@ type ProductRow = RowDataPacket & {
 };
 
 type SecondaryRow = RowDataPacket & { product_id: number; category_code: string; label: string; position: number };
+type PublicProductRow = ProductRow & {
+  shop_name: string;
+  shop_slug: string;
+  shop_profile_media_id: number | null;
+  address_detail: string;
+  province_code: string;
+  province_name: string;
+  city_regency_code: string;
+  city_regency_name: string;
+  district_code: string;
+  district_name: string;
+};
 
 export type WhatsAppItemInput = { productId: string | number; quantity: number };
 export type WhatsAppLinkResult = {
@@ -85,7 +97,7 @@ function shopFromRow(row: ShopRow): ShopSummary {
   };
 }
 
-function locationConditions(search: ShopSearchParams): { sql: string[]; params: string[] } {
+function locationConditions(search: PublicSearchParams): { sql: string[]; params: string[] } {
   const sql: string[] = [];
   const params: string[] = [];
   if (search.provinceCode) { sql.push("s.province_code = ?"); params.push(search.provinceCode); }
@@ -94,7 +106,7 @@ function locationConditions(search: ShopSearchParams): { sql: string[]; params: 
   return { sql, params };
 }
 
-function productConditions(search: ShopSearchParams, alias = "p"): { sql: string[]; params: string[] } {
+function productConditions(search: PublicSearchParams, alias = "p"): { sql: string[]; params: string[] } {
   const sql = [`${alias}.available = TRUE`, `${alias}.visibility_status = 'PUBLISHED'`];
   const params: string[] = [];
   if (search.q) {
@@ -123,7 +135,7 @@ function parseOffset(cursor: string | null): number {
   return parsed;
 }
 
-export async function validatePublicSearch(search: ShopSearchParams): Promise<void> {
+export async function validatePublicSearch(search: PublicSearchParams): Promise<void> {
   if (search.cityRegencyCode && !search.provinceCode) throw new HttpError(400, "INVALID_LOCATION_FILTER", "Pilih provinsi sebelum memilih kabupaten atau kota.");
   if (search.districtCode && !search.cityRegencyCode) throw new HttpError(400, "INVALID_LOCATION_FILTER", "Pilih kabupaten atau kota sebelum memilih kecamatan.");
   if (search.provinceCode) await assertLocation(search.provinceCode, "PROVINCE", null);
@@ -159,6 +171,24 @@ export async function listCategories(): Promise<unknown[]> {
   return rows.map((row) => ({ code: String(row.code), label: String(row.label), displayOrder: Number(row.displayOrder) }));
 }
 
+async function secondaryCategoriesByProduct(productIds: number[]): Promise<Map<number, SecondaryRow[]>> {
+  const secondaryByProduct = new Map<number, SecondaryRow[]>();
+  if (productIds.length === 0) return secondaryByProduct;
+  const productPlaceholders = productIds.map(() => "?").join(", ");
+  const [secondaryRows] = await db.execute<SecondaryRow[]>(
+    `SELECT a.product_id, a.category_code, pc.label, a.position
+     FROM product_category_assignments a JOIN product_categories pc ON pc.code = a.category_code AND pc.active = TRUE
+     WHERE a.product_id IN (${productPlaceholders}) ORDER BY a.position ASC`,
+    productIds,
+  );
+  for (const secondary of secondaryRows) {
+    const current = secondaryByProduct.get(Number(secondary.product_id)) ?? [];
+    current.push(secondary);
+    secondaryByProduct.set(Number(secondary.product_id), current);
+  }
+  return secondaryByProduct;
+}
+
 async function getProductRows(shopIds: number[], search: ShopSearchParams, limitPerShop: number | null): Promise<Map<number, ProductSummary[]>> {
   if (shopIds.length === 0) return new Map();
   const placeholders = shopIds.map(() => "?").join(", ");
@@ -170,22 +200,7 @@ async function getProductRows(shopIds: number[], search: ShopSearchParams, limit
      ORDER BY p.created_at DESC, p.id DESC`,
     [...shopIds, ...conditions.params],
   );
-  const productIds = rows.map((row) => Number(row.id));
-  const secondaryByProduct = new Map<number, SecondaryRow[]>();
-  if (productIds.length > 0) {
-    const productPlaceholders = productIds.map(() => "?").join(", ");
-    const [secondaryRows] = await db.execute<SecondaryRow[]>(
-      `SELECT a.product_id, a.category_code, pc.label, a.position
-       FROM product_category_assignments a JOIN product_categories pc ON pc.code = a.category_code AND pc.active = TRUE
-       WHERE a.product_id IN (${productPlaceholders}) ORDER BY a.position ASC`,
-      productIds,
-    );
-    for (const secondary of secondaryRows) {
-      const current = secondaryByProduct.get(Number(secondary.product_id)) ?? [];
-      current.push(secondary);
-      secondaryByProduct.set(Number(secondary.product_id), current);
-    }
-  }
+  const secondaryByProduct = await secondaryCategoriesByProduct(rows.map((row) => Number(row.id)));
   const result = new Map<number, ProductSummary[]>();
   for (const row of rows) {
     const shopProducts = result.get(Number(row.shop_id)) ?? [];
@@ -221,6 +236,64 @@ export async function listPublicShops(search: ShopSearchParams): Promise<ShopSea
   );
   const productMap = await getProductRows(rows.map((row) => Number(row.id)), search, 4);
   const items: ShopSearchItem[] = rows.map((row) => ({ shop: shopFromRow(row), matchingProducts: productMap.get(Number(row.id)) ?? [] }));
+  return { appliedFilters: search, resultCount: total, nextCursor: offset + items.length < total ? String(offset + items.length) : null, items };
+}
+
+export async function listPublicProducts(search: ProductSearchParams): Promise<ProductSearchResponse> {
+  await validatePublicSearch(search);
+  const location = locationConditions(search);
+  const products = productConditions(search);
+  const where = [
+    "s.visibility_status = 'PUBLISHED'",
+    "se.status = 'ACTIVE'",
+    ...location.sql,
+    ...products.sql,
+  ];
+  const params = [...location.params, ...products.params];
+  const [countRows] = await db.execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS total
+     FROM products p JOIN shops s ON s.id = p.shop_id JOIN sellers se ON se.id = s.seller_id
+     WHERE ${where.join(" AND ")}`,
+    params,
+  );
+  const total = Number(countRows[0]?.total ?? 0);
+  const limit = parseLimit(search.limit === undefined ? null : String(search.limit));
+  const offset = parseOffset(search.cursor ?? null);
+  const [rows] = await db.execute<PublicProductRow[]>(
+    `SELECT p.id, p.shop_id, p.name, p.price_idr, p.description, p.media_id, p.primary_category_code, p.available, pc.label AS primary_category_label,
+       s.name AS shop_name, s.slug AS shop_slug, s.profile_media_id AS shop_profile_media_id, s.address_detail,
+       s.province_code, province.name AS province_name, s.city_regency_code, city.name AS city_regency_name,
+       s.district_code, district.name AS district_name
+     FROM products p
+       JOIN shops s ON s.id = p.shop_id
+       JOIN sellers se ON se.id = s.seller_id
+       JOIN product_categories pc ON pc.code = p.primary_category_code AND pc.active = TRUE
+       JOIN locations province ON province.code = s.province_code AND province.level = 'PROVINCE' AND province.active = TRUE
+       JOIN locations city ON city.code = s.city_regency_code AND city.level = 'CITY_REGENCY' AND city.active = TRUE
+       JOIN locations district ON district.code = s.district_code AND district.level = 'DISTRICT' AND district.active = TRUE
+     WHERE ${where.join(" AND ")}
+     ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+  const secondaryByProduct = await secondaryCategoriesByProduct(rows.map((row) => Number(row.id)));
+  const items: PublicProduct[] = rows.map((row) => ({
+    ...productFromRow(row, secondaryByProduct.get(Number(row.id)) ?? []),
+    shop: {
+      id: Number(row.shop_id),
+      name: row.shop_name,
+      slug: row.shop_slug,
+      profileImageUrl: row.shop_profile_media_id === null ? null : `/media/${row.shop_profile_media_id}`,
+      address: {
+        addressDetail: row.address_detail,
+        provinceCode: row.province_code,
+        provinceName: row.province_name,
+        cityRegencyCode: row.city_regency_code,
+        cityRegencyName: row.city_regency_name,
+        districtCode: row.district_code,
+        districtName: row.district_name,
+      },
+    },
+  }));
   return { appliedFilters: search, resultCount: total, nextCursor: offset + items.length < total ? String(offset + items.length) : null, items };
 }
 

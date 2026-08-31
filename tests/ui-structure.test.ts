@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 const app = await Bun.file("src/client/app.tsx").text();
 const home = await Bun.file("src/client/pages/HomePage.tsx").text();
+const publicProductCard = await Bun.file("src/client/components/PublicProductCard.tsx").text();
 const clientStyles = await Bun.file("src/client/styles.css").text();
 const locationFilters = await Bun.file("src/client/components/LocationFilters.tsx").text();
 const sellerDashboard = await Bun.file("src/client/pages/SellerDashboardPage.tsx").text();
@@ -12,6 +13,8 @@ const adsenseSlot = await Bun.file("src/client/components/AdsenseSlot.tsx").text
 const adminApi = await Bun.file("src/client/api.ts").text();
 const adminRoute = await Bun.file("src/server/routes/admin.ts").text();
 const adminService = await Bun.file("src/server/admin-service.ts").text();
+const publicRoute = await Bun.file("src/server/routes/public.ts").text();
+const publicService = await Bun.file("src/server/public-service.ts").text();
 
 describe("tata letak aplikasi", () => {
   test("menggunakan utilitas Tailwind pada shell publik", () => {
@@ -26,14 +29,37 @@ describe("tata letak aplikasi", () => {
     expect(locationFilters).toContain('className="location-filter-row"');
   });
 
-  test("memuat daftar toko bertahap tanpa kartu hero", () => {
-    expect(home).not.toContain('className="home-hero"');
-    expect(home).toContain("SHOP_PAGE_SIZE");
+  test("memuat feed produk bertahap tanpa bagian home-intro", () => {
+    expect(home).not.toContain("home-intro");
+    expect(home).toContain("PRODUCT_PAGE_SIZE");
+    expect(home).toContain("listPublicProducts");
+    expect(home).not.toContain("listShops");
+    expect(home).toContain("PublicProductCard");
     expect(home).toContain("IntersectionObserver");
     expect(home).toContain("cursor");
-    expect(home).toContain("Memuat toko lainnya");
+    expect(home).toContain("Memuat produk lainnya");
+    expect(home).toContain('className="discovery-product-grid"');
+    expect(publicProductCard).toContain("const href = shopHref(product)");
+    expect(publicProductCard).toContain("href={href}");
+    expect(publicProductCard).toContain("ui.viewShop");
+    expect(publicProductCard).toContain("address.districtName");
+    expect(publicProductCard).not.toContain("Tambah ke keranjang");
+    expect(home).toContain("retryNumber");
+    expect(home).toContain("Filter tidak valid");
     expect(clientStyles).toContain(".infinite-load-state");
-    expect(clientStyles).not.toContain(".home-hero");
+    expect(clientStyles).not.toContain(".home-intro");
+    expect(clientStyles).toContain(".discovery-product-grid");
+  });
+
+  test("menyediakan kontrak feed produk publik dengan penyaringan server", () => {
+    expect(publicRoute).toContain('segments[1] === "products"');
+    expect(publicRoute).toContain("listPublicProducts(searchFromUrl(url))");
+    expect(publicService).toContain("export async function listPublicProducts");
+    expect(publicService).toContain("p.available = TRUE");
+    expect(publicService).toContain("p.visibility_status = 'PUBLISHED'");
+    expect(publicService).toContain("ORDER BY p.created_at DESC, p.id DESC");
+    expect(publicService).toContain("LIMIT ? OFFSET ?");
+    expect(publicService).toContain("secondaryCategoriesByProduct");
   });
 
   test("menjaga tombol masuk dan daftar tetap terlihat di mobile", () => {

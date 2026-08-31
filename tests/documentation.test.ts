@@ -5,8 +5,8 @@ const frd = await Bun.file("FRD.md").text();
 
 describe("dokumen marketplace", () => {
   test("menggunakan versi dan stack yang disepakati", () => {
-    expect(prd).toContain("| Version | 1.5 |");
-    expect(frd).toContain("| Version | 1.5 |");
+    expect(prd).toContain("| Version | 1.6 |");
+    expect(frd).toContain("| Version | 1.6 |");
     expect(prd).toContain("Bun 1.4.x, React 19.2, and TypeScript");
     expect(frd).toContain("Bun 1.4.x, React 19.2, TypeScript");
     expect(prd).not.toMatch(/Next\.js/i);
@@ -25,6 +25,8 @@ describe("dokumen marketplace", () => {
     }
     expect(frd).toContain("CLOTHING_FASHION");
     expect(frd).toContain("GET` | `/api/shops`");
+    expect(frd).toContain("GET` | `/api/products`");
+    expect(frd).toContain("ProductSearchParams");
     expect(frd).toContain("POST` | `/api/events`");
     expect(frd).toContain("`q`");
     expect(frd).toContain("AND logic");
@@ -40,5 +42,7 @@ describe("dokumen marketplace", () => {
     expect(frd).toContain("## 18. Traceability matrix");
     expect(frd).toContain("Bahasa Indonesia application language");
     expect(frd).toContain("Home product search and filtering");
+    expect(prd).toContain("product-first");
+    expect(frd).toContain("cursor-based infinite loading");
   });
 });

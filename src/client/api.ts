@@ -1,4 +1,4 @@
-import type { LocationLevel, LocationOption, ProductCategory, PublicShop, SellerProduct, ShopSearchParams, ShopSearchResponse } from "../shared/types";
+import type { LocationLevel, LocationOption, ProductCategory, ProductSearchParams, ProductSearchResponse, PublicShop, SellerProduct, ShopSearchParams, ShopSearchResponse } from "../shared/types";
 
 export class ApiError extends Error {
   constructor(public readonly status: number, public readonly code: string, message: string) {
@@ -50,6 +50,13 @@ export function listShops(params: ShopSearchParams): Promise<ShopSearchResponse>
   for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
   const suffix = query.toString();
   return request<ShopSearchResponse>(`/api/shops${suffix ? `?${suffix}` : ""}`);
+}
+
+export function listPublicProducts(params: ProductSearchParams): Promise<ProductSearchResponse> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== "") query.set(key, String(value));
+  const suffix = query.toString();
+  return request<ProductSearchResponse>(`/api/products${suffix ? `?${suffix}` : ""}`);
 }
 
 export function getLocations(level: LocationLevel, parentCode?: string): Promise<{ items: LocationOption[] }> {

@@ -1,21 +1,21 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ApiError, getCategories, getLocations, listShops, trackEvent } from "../api";
+import { ApiError, getCategories, getLocations, listPublicProducts, trackEvent } from "../api";
 import { AdsenseSlot } from "../components/AdsenseSlot";
 import { LocationFilters } from "../components/LocationFilters";
-import { ShopCard } from "../components/ShopCard";
+import { PublicProductCard } from "../components/PublicProductCard";
 import { Icon } from "../components/Icon";
 import { ui } from "../../shared/i18n";
-import type { LocationOption, ProductCategory, ShopSearchParams, ShopSearchResponse } from "../../shared/types";
+import type { LocationOption, ProductCategory, ProductSearchParams, ProductSearchResponse } from "../../shared/types";
 
-const SHOP_PAGE_SIZE = 12;
+const PRODUCT_PAGE_SIZE = 24;
 
-function readFilters(): ShopSearchParams {
+function readFilters(): ProductSearchParams {
   const query = new URLSearchParams(window.location.search);
   const value = (key: string) => query.get(key)?.trim() || undefined;
   return { q: value("q"), provinceCode: value("provinceCode"), cityRegencyCode: value("cityRegencyCode"), districtCode: value("districtCode"), categoryCode: value("categoryCode") };
 }
 
-function writeFilters(filters: ShopSearchParams): ShopSearchParams {
+function writeFilters(filters: ProductSearchParams): ProductSearchParams {
   const query = new URLSearchParams();
   for (const key of ["q", "provinceCode", "cityRegencyCode", "districtCode", "categoryCode"] as const) {
     const value = filters[key];
@@ -30,8 +30,12 @@ function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : ui.errorGeneric;
 }
 
+function errorCode(error: unknown): string | null {
+  return error instanceof ApiError ? error.code : null;
+}
+
 export function HomePage() {
-  const [filters, setFilters] = useState<ShopSearchParams>(readFilters);
+  const [filters, setFilters] = useState<ProductSearchParams>(readFilters);
   const [searchInput, setSearchInput] = useState(filters.q ?? "");
   const [provinces, setProvinces] = useState<LocationOption[]>([]);
   const [cities, setCities] = useState<LocationOption[]>([]);
@@ -39,11 +43,13 @@ export function HomePage() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [locationLoading, setLocationLoading] = useState({ provinces: true, cities: false, districts: false });
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [result, setResult] = useState<ShopSearchResponse | null>(null);
+  const [result, setResult] = useState<ProductSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<string | null>(null);
+  const [retryNumber, setRetryNumber] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const activeRequestKey = useRef("");
   const requestKey = JSON.stringify(filters);
@@ -83,10 +89,11 @@ export function HomePage() {
     setLoadingMore(false);
     setLoadMoreError(null);
     setError(null);
+    setErrorKind(null);
     setResult(null);
-    listShops({ ...filters, limit: SHOP_PAGE_SIZE }).then((response) => { if (active) setResult(response); }).catch((reason: unknown) => { if (active) { setResult(null); setError(errorMessage(reason)); } }).finally(() => { if (active) setLoading(false); });
+    listPublicProducts({ ...filters, limit: PRODUCT_PAGE_SIZE }).then((response) => { if (active) setResult(response); }).catch((reason: unknown) => { if (active) { setResult(null); setError(errorMessage(reason)); setErrorKind(errorCode(reason)); } }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [filters, requestKey]);
+  }, [filters, requestKey, retryNumber]);
 
   const nextCursor = result?.nextCursor ?? null;
   const loadMore = useCallback(async () => {
@@ -95,7 +102,7 @@ export function HomePage() {
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const response = await listShops({ ...filters, cursor, limit: SHOP_PAGE_SIZE });
+      const response = await listPublicProducts({ ...filters, cursor, limit: PRODUCT_PAGE_SIZE });
       if (activeRequestKey.current !== requestKey) return;
       setResult((current) => current ? { ...current, resultCount: response.resultCount, nextCursor: response.nextCursor, items: [...current.items, ...response.items] } : current);
     } catch (reason: unknown) {
@@ -118,11 +125,11 @@ export function HomePage() {
     return () => observer.disconnect();
   }, [loadMore, loading, loadingMore, loadMoreError, nextCursor]);
 
-  function apply(next: ShopSearchParams) {
+  function apply(next: ProductSearchParams) {
     setFilters(writeFilters(next));
   }
 
-  function applyFilter(next: ShopSearchParams) {
+  function applyFilter(next: ProductSearchParams) {
     const filterCount = [next.provinceCode, next.cityRegencyCode, next.districtCode, next.categoryCode].filter(Boolean).length;
     trackEvent("home_filter_applied", { filterCount, ...(next.categoryCode ? { categoryCode: next.categoryCode } : {}) });
     apply(next);
@@ -146,12 +153,7 @@ export function HomePage() {
   }, [loading, result, hasFilters]);
   return (
     <>
-      <section className="home-intro">
-        <p className="eyebrow">Katalog toko lokal Indonesia</p>
-        <h1>Temukan produk lokal</h1>
-        <p>Jelajahi katalog UMKM dan hubungi penjual langsung melalui WhatsApp.</p>
-      </section>
-      <section className="filter-panel" aria-label="Pencarian dan filter toko">
+      <section className="filter-panel home-discovery-panel" aria-label="Pencarian dan filter produk">
         <form className="home-filter-form" onSubmit={submitSearch}>
           <div className="home-search-row">
             <div className="field filter-search-field">
@@ -185,16 +187,23 @@ export function HomePage() {
         </form>
       </section>
       <AdsenseSlot placement="HOME" />
-      <section aria-labelledby="shop-list-heading">
-        <div className="section-heading"><div><h2 id="shop-list-heading">{ui.shops}</h2>{result ? <p>{result.resultCount} toko ditemukan</p> : null}</div></div>
+      <section aria-labelledby="product-list-heading">
+        <div className="section-heading"><div><p className="eyebrow">Katalog pilihan</p><h1 id="product-list-heading">Produk lokal</h1>{result ? <p>{result.resultCount} produk ditemukan</p> : null}</div></div>
         {loading && !result ? <div className="loading-state" aria-live="polite">{ui.loading}</div> : null}
-        {error ? <div className="error-state" role="alert">{error}</div> : null}
-        {!loading && !error && result && result.items.length === 0 ? <div className="empty-state">{hasFilters ? ui.noResults : ui.noShops}</div> : null}
-        {!loading && !error && result && result.items.length > 0 ? <div className="shop-grid">{result.items.map((item) => <ShopCard key={item.shop.id} item={item} />)}</div> : null}
-        {!loading && !error && result && result.items.length > 0 && result.nextCursor ? <div ref={loadMoreRef} className="infinite-load-state" aria-live="polite">
-          {loadingMore ? <><span className="loading-spinner" aria-hidden="true" />Memuat toko lainnya...</> : loadMoreError ? <><span role="alert">{loadMoreError}</span><button className="button button-text" type="button" onClick={() => void loadMore()}>Coba lagi</button></> : <span>Gulir untuk memuat toko lainnya</span>}
+        {error ? <div className="error-state" role="alert">
+          <h2>{errorKind === "INVALID_LOCATION_FILTER" || errorKind === "INVALID_CATEGORY" ? "Filter tidak valid" : "Produk belum dapat dimuat"}</h2>
+          <p>{error}</p>
+          <div className="card-actions">
+            <button className="button button-primary" type="button" onClick={() => setRetryNumber((current) => current + 1)}>{ui.retry}</button>
+            {errorKind === "INVALID_LOCATION_FILTER" || errorKind === "INVALID_CATEGORY" ? <button className="button button-text" type="button" onClick={clearFilters}>{ui.clearFilters}</button> : null}
+          </div>
         </div> : null}
-        {!loading && !error && result && result.items.length > 0 && !result.nextCursor ? <p className="infinite-end-state">Semua toko telah ditampilkan.</p> : null}
+        {!loading && !error && result && result.items.length === 0 ? <div className="empty-state">{hasFilters ? ui.noResults : ui.noProducts}</div> : null}
+        {!loading && !error && result && result.items.length > 0 ? <div className="discovery-product-grid">{result.items.map((product) => <PublicProductCard key={product.id} product={product} />)}</div> : null}
+        {!loading && !error && result && result.items.length > 0 && result.nextCursor ? <div ref={loadMoreRef} className="infinite-load-state" aria-live="polite">
+          {loadingMore ? <><span className="loading-spinner" aria-hidden="true" />Memuat produk lainnya...</> : loadMoreError ? <><span role="alert">{loadMoreError}</span><button className="button button-text" type="button" onClick={() => void loadMore()}>{ui.retry}</button></> : <span>Gulir untuk memuat produk lainnya</span>}
+        </div> : null}
+        {!loading && !error && result && result.items.length > 0 && !result.nextCursor ? <p className="infinite-end-state">Semua produk telah ditampilkan.</p> : null}
       </section>
     </>
   );

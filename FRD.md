@@ -5,7 +5,7 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP implementation specification |
-| Version | 1.5 |
+| Version | 1.6 |
 | Date | 2026-08-31 |
 | Application stack | Bun 1.4.x, React 19.2, TypeScript |
 | Image service | Self-hosted PictShare v2 (`hascheksolutions/pictshare:2`) |
@@ -45,7 +45,7 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 - Keep interactive controls at least 48px by 48px.
 - Keep the home search and primary filter controls near the top of the mobile layout.
 - Use a sticky or bottom-sheet cart summary on mobile.
-- Use responsive shop and product cards without horizontal scrolling.
+- Use responsive product cards without page-wide horizontal scrolling. The homepage filter row may scroll horizontally on narrow screens.
 - Define responsive layout tiers as mobile below 600px, tablet from 600px through 1023px, and desktop at 1024px or wider.
 - Provide visible selected, focused, disabled, loading, success, and error states for every form and filter control.
 
@@ -69,6 +69,7 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 - Use the `threads_shop` database.
 - Default local connection is `127.0.0.1:3306`; the port and credentials must be environment-configurable.
 - Use a migration-managed MySQL data access layer.
+- Version 1.6 reuses the existing seller, shop, product, category, and location tables; no database migration is required for the product-first homepage or dashboard redesign.
 - Provision a dedicated application database user with only the permissions needed by the application. Credentials must come from environment variables and must not be committed.
 - Store monetary values as integer IDR amounts, not floating-point values.
 
@@ -88,7 +89,7 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 
 | Actor | Authentication | Permissions |
 | --- | --- | --- |
-| Customer | None | Read public shops and products; create a browser cart; generate a WhatsApp order link. |
+| Customer | None | Read public products and shops; create a browser cart; generate a WhatsApp order link. |
 | Seller | Phone and six-digit PIN | Manage one owned shop, update permitted shop fields, upload media, and manage owned products. |
 | Superadmin | Separate protected admin credentials | Manage all sellers, shops, products, seller PIN resets, audit records, and AdSense configuration. |
 
@@ -100,7 +101,7 @@ There is no public customer account and no seller self-service superadmin regist
 
 | Route | Access | Purpose |
 | --- | --- | --- |
-| `/` | Public | Marketplace home and shop discovery. |
+| `/` | Public | Marketplace home and product discovery. |
 | `/{shopSlug}` | Public | Public shop profile, catalog, cart, and WhatsApp order action. |
 | `/seller/register` | Public | Seller account registration. |
 | `/seller/login` | Public | Seller login. |
@@ -137,24 +138,23 @@ The reserved list must be maintained in one shared server and client validation 
 
 The home page must:
 
-1. Request publicly visible shops from the server.
-2. Render a responsive list or grid of shop cards.
-3. Show shop name, profile image when available, structured location, address detail, and a link to the public shop URL.
-4. Render up to four available and published product images for each shop.
-5. Use products ordered by `created_at DESC, id DESC` when no product search or category filter is active.
-6. Provide a `Cari produk` input that matches active product names and descriptions.
-7. Provide cascading `Provinsi`, `Kabupaten/Kota`, and `Kecamatan` filters for shop location.
-8. Provide one `Kategori produk` filter that matches a product's primary or secondary category.
-9. Combine search, location, and category conditions using AND logic.
-10. Return shop cards when at least one public, available product matches the product conditions and the shop matches the location conditions.
-11. Show up to four matching product previews on filtered shop cards.
-12. Preserve `q`, `provinceCode`, `cityRegencyCode`, `districtCode`, and `categoryCode` in the URL query string.
-13. Show Bahasa Indonesia loading, invalid-filter, no-shops, empty-catalog, and no-results messages.
-14. Render an AdSense placement using the current `HOME` slot configuration.
+1. Request publicly visible, available products from the server.
+2. Render a responsive product grid with two columns on mobile, three on tablet, and four on wide desktop.
+3. Show each product's image, name, IDR price, primary category, optional description, associated shop, and structured location.
+4. Link the product image, name, and `Lihat toko` action to the associated public shop URL.
+5. Load products in pages of 24 with the existing cursor response shape and automatically request the next page when the user reaches the list end.
+6. Sort products by `created_at DESC, id DESC` for deterministic newest-first discovery.
+7. Provide a `Cari produk` input that matches active product names and descriptions.
+8. Provide cascading `Provinsi`, `Kabupaten/Kota`, and `Kecamatan` filters for product shop location.
+9. Provide one `Kategori produk` filter that matches a product's primary or secondary category.
+10. Combine search, location, and category conditions using AND logic.
+11. Preserve `q`, `provinceCode`, `cityRegencyCode`, `districtCode`, and `categoryCode` in the URL query string.
+12. Show Bahasa Indonesia loading, invalid-filter, empty-feed, no-results, retry, and end-of-list messages.
+13. Render an AdSense placement using the current `HOME` slot configuration.
 
-The home page must not expose seller phone numbers, PIN state, internal session data, or hidden shops.
+The home page must not expose seller phone numbers, PIN state, internal session data, hidden shops, unavailable products, ratings, shipping claims, discount claims, or unsupported marketplace metadata.
 
-Search behavior is case-insensitive and trims the query before matching product names and descriptions. A blank query removes the text condition. The home page keeps the shop-card result layout rather than switching to standalone product result cards.
+Search behavior is case-insensitive and trims the query before matching product names and descriptions. A blank query removes the text condition. Homepage product cards do not add items to the cart; customers open the shop catalog before ordering.
 
 ### 5.2 Public shop page
 
@@ -483,11 +483,14 @@ Successful mutation responses should return the updated resource or a minimal re
 | Method | Path | Behavior |
 | --- | --- | --- |
 | `GET` | `/api/shops` | Return paginated published shops with up to four available product previews per shop, applying the optional search and filter parameters below. |
+| `GET` | `/api/products` | Return paginated public, available products from active sellers, including the associated shop and structured location. |
 | `GET` | `/api/shops/{slug}` | Return one published shop with structured location data and its available, published products and categories. |
 | `GET` | `/api/locations` | Return location options from the seeded dataset. Accept `level` and, for child levels, `parentCode`. |
 | `GET` | `/api/product-categories` | Return the active fixed product category taxonomy in display order. |
 | `POST` | `/api/shops/{slug}/whatsapp-link` | Validate submitted cart item IDs and quantities, calculate current totals, record a click event, and return a WhatsApp URL. Do not create an order. |
 | `POST` | `/api/events` | Accept an allowlisted client activity event with filtered metadata for discovery, cart, and WhatsApp analytics. Do not accept secrets or arbitrary metadata. |
+
+The existing `GET /api/shops` contract remains available for compatibility. The homepage uses `GET /api/products` for product-first discovery.
 
 The `GET /api/shops` query parameters are:
 
@@ -502,6 +505,57 @@ The `GET /api/shops` query parameters are:
 | `limit` | Optional bounded page size. |
 
 All supplied conditions are combined with AND logic. A shop is returned only when its location satisfies the supplied location conditions and at least one of its products satisfies the supplied product search/category conditions. When no product search or category filter is active, previews use the newest available products. When product conditions are active, previews contain only matching products.
+
+The `GET /api/products` query parameters use the same names and validation rules as `/api/shops`:
+
+| Parameter | Rules |
+| --- | --- |
+| `q` | Optional trimmed, case-insensitive search string matched against active product names and descriptions. |
+| `provinceCode` | Optional valid province location code applied to the product's shop. |
+| `cityRegencyCode` | Optional valid city/regency child of `provinceCode`. |
+| `districtCode` | Optional valid district child of `cityRegencyCode`. |
+| `categoryCode` | Optional active category code matched against primary or secondary product assignments. |
+| `cursor` | Optional numeric offset cursor returned by the previous response. |
+| `limit` | Optional page size from 1 through 48. The homepage requests 24 items. |
+
+The product feed applies every supplied condition using AND logic, excludes hidden or unavailable products and inactive sellers, and orders results by `p.created_at DESC, p.id DESC`. The response is:
+
+```json
+{
+  "items": [
+    {
+      "id": 42,
+      "name": "Kemeja batik",
+      "priceIdr": 250000,
+      "description": "Kemeja batik untuk acara resmi.",
+      "imageUrl": "/media/42",
+      "primaryCategory": { "code": "CLOTHING_FASHION", "label": "Pakaian dan Mode", "displayOrder": 1 },
+      "secondaryCategories": [],
+      "available": true,
+      "shop": {
+        "id": 7,
+        "name": "Warung Makmur",
+        "slug": "warung-makmur",
+        "profileImageUrl": "/media/9",
+        "address": {
+          "addressDetail": "Jalan Contoh Nomor 1",
+          "provinceCode": "31",
+          "provinceName": "DKI Jakarta",
+          "cityRegencyCode": "31.01",
+          "cityRegencyName": "Kabupaten Administrasi Kepulauan Seribu",
+          "districtCode": "31.01.01",
+          "districtName": "Kepulauan Seribu Selatan"
+        }
+      }
+    }
+  ],
+  "appliedFilters": { "q": "batik", "categoryCode": "CLOTHING_FASHION" },
+  "resultCount": 1,
+  "nextCursor": null
+}
+```
+
+The homepage uses the product feed response directly. It does not flatten shop previews client-side, and product cards link to `/{shopSlug}` rather than creating a product detail route.
 
 The shop-list response must include the applied filters, result count, pagination state, shop structured location, and up to four matching preview products:
 
@@ -563,6 +617,29 @@ type ShopSearchParams = {
   cityRegencyCode?: string;
   districtCode?: string;
   categoryCode?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+type ProductSearchParams = {
+  q?: string;
+  provinceCode?: string;
+  cityRegencyCode?: string;
+  districtCode?: string;
+  categoryCode?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+type PublicProduct = ProductSummary & {
+  shop: ShopSummary;
+};
+
+type ProductSearchResponse = {
+  appliedFilters: ProductSearchParams;
+  resultCount: number;
+  nextCursor: string | null;
+  items: PublicProduct[];
 };
 ```
 
@@ -941,7 +1018,7 @@ The component reads the active settings and does not provide seller-level config
 
 The UI must define states for:
 
-- No public shops.
+- No public products in the homepage feed.
 - Public shop with no available products.
 - Unknown shop slug.
 - Hidden shop or product.
@@ -957,8 +1034,8 @@ The UI must define states for:
 - Invalid location filter or broken location parent-child relationship.
 - Location dropdown loading or empty-child state.
 - Product category loading or invalid category state.
-- Home search with no matching shops.
-- Home filters with no matching shops.
+- Home search with no matching products.
+- Home filters with no matching products.
 - AdSense disabled or not configured.
 - Temporary database or storage failure.
 
@@ -972,7 +1049,7 @@ All error, success, confirmation, loading, and empty-state copy must be in Bahas
 - Keep touch targets at least 48px by 48px.
 - Keep the search field and primary filters near the top of the mobile home layout.
 - Use a sticky or bottom-sheet cart summary on mobile.
-- Do not require horizontal scrolling for shop cards, product cards, or filters.
+- Do not require page-wide horizontal scrolling for product cards. The homepage filter row may scroll horizontally on narrow screens.
 - Use semantic headings, landmarks, labels, buttons, and form controls.
 - Write accessible names, labels, status announcements, and system-generated alt text in Bahasa Indonesia.
 - Ensure all interactive elements are keyboard reachable.
@@ -1043,10 +1120,10 @@ Analytics event names remain technical identifiers and are not shown to users.
 - Seller product reads and writes are limited to the seller's own shop.
 - Hidden shops and products are excluded from public APIs.
 - Unavailable products are excluded from previews and order-link validation.
-- Shop search matches product names and descriptions case-insensitively after trimming.
+- Product feed search matches product names and descriptions case-insensitively after trimming.
 - Home search, location, and category conditions combine with AND logic.
 - Category search matches either primary or secondary product assignments.
-- Filtered previews contain only matching available products and no more than four items.
+- Product feed results contain only matching available products and return stable cursor pagination.
 - Invalid location filters return `INVALID_LOCATION_FILTER`.
 - WhatsApp-link generation uses current database prices, ignores client prices, and returns the correct seller phone.
 - Media uploads send the `file` field and configured `uploadcode` to PictShare v2 and persist `remote_hash` and `remote_url`.
@@ -1058,37 +1135,38 @@ Analytics event names remain technical identifiers and are not shown to users.
 
 ### 17.3 End-to-end scenarios
 
-1. A visitor opens `/` with no shops and sees the empty state.
-2. A visitor opens `/` with one shop and sees no more than four product previews.
-3. A visitor searches for a product name and sees only shops with matching active products.
-4. A visitor searches by a description term and sees the matching shop cards.
-5. A visitor selects a province, then sees only its city/regency options.
-6. A visitor selects a city/regency, then sees only its district options.
-7. A visitor changes a parent location and child selections are cleared.
-8. A visitor combines search, location, and category filters and sees only shops matching all conditions.
-9. A visitor selects a category that is assigned as a product's secondary category and sees that shop.
-10. A visitor receives the no-results state and can clear all filters.
-11. A visitor opens a shared `/{shopSlug}` URL directly and sees the correct catalog.
-12. A visitor adds two products from one shop, changes quantities, and receives a correct WhatsApp link.
-13. A visitor attempts to add a product from another shop and receives the cart replacement confirmation.
-14. A product becomes unavailable before checkout and the customer receives a clear correction message.
-15. A seller registers with a valid phone and PIN, completes shop setup, and sees the published catalog.
-16. A seller saves a valid province, city/regency, district, and address detail combination.
-17. A seller attempts to save an invalid location hierarchy and receives a field-level error.
-18. A seller attempts to use an existing phone or slug and receives a field-level error.
-19. A seller creates a product with one primary category and two secondary categories.
-20. A seller attempts to create a product without a primary category or with three secondary categories and receives validation errors.
-21. A seller attempts to edit the slug and the API rejects the mutation.
-22. A seller cannot access another seller's product by changing the product ID.
-23. A superadmin hides a shop and confirms that its public URL returns not found.
-24. A superadmin restores the shop and confirms that it is public again.
-25. A superadmin resets a seller PIN and the old session no longer works.
-26. A seller attempts to modify AdSense settings and receives a forbidden response.
-27. AdSense slots render on public, seller, and superadmin pages when enabled.
-28. A superadmin moves between activity-log pages and sees the correct records, total count, and disabled first or last navigation control.
-29. Invalid images are rejected before they become shop or product media.
-30. The primary mobile layout uses Material components and keeps all key controls at least 48px.
-31. A valid image is uploaded to the separate PictShare v2 CapRover service, and the resulting media URL loads through `/media/{id}`.
+1. A visitor opens `/` with no public products and sees the empty-feed state.
+2. A visitor opens `/` with products from multiple shops and sees product cards, each linked to its shop catalog.
+3. A visitor requests the next product page by scrolling and sees additional products without duplicate cards.
+4. A visitor searches for a product name and sees only matching public products.
+5. A visitor searches by a description term and sees the matching product cards.
+6. A visitor selects a province, then sees only its city/regency options.
+7. A visitor selects a city/regency, then sees only its district options.
+8. A visitor changes a parent location and child selections are cleared.
+9. A visitor combines search, location, and category filters and sees only products matching every condition.
+10. A visitor selects a category assigned as a product's secondary category and sees that product.
+11. A visitor receives the no-results state and can clear all filters.
+12. A visitor opens a shared `/{shopSlug}` URL directly and sees the correct catalog.
+13. A visitor adds two products from one shop, changes quantities, and receives a correct WhatsApp link.
+14. A visitor attempts to add a product from another shop and receives the cart replacement confirmation.
+15. A product becomes unavailable before checkout and the customer receives a clear correction message.
+16. A seller registers with a valid phone and PIN, completes shop setup, and sees the published catalog.
+17. A seller saves a valid province, city/regency, district, and address detail combination.
+18. A seller attempts to save an invalid location hierarchy and receives a field-level error.
+19. A seller attempts to use an existing phone or slug and receives a field-level error.
+20. A seller creates a product with one primary category and two secondary categories.
+21. A seller attempts to create a product without a primary category or with three secondary categories and receives validation errors.
+22. A seller attempts to edit the slug and the API rejects the mutation.
+23. A seller cannot access another seller's product by changing the product ID.
+24. A superadmin hides a shop and confirms that its public URL returns not found.
+25. A superadmin restores the shop and confirms that it is public again.
+26. A superadmin resets a seller PIN and the old session no longer works.
+27. A seller attempts to modify AdSense settings and receives a forbidden response.
+28. AdSense slots render on public, seller, and superadmin pages when enabled.
+29. A superadmin moves between activity-log pages and sees the correct records, total count, and disabled first or last navigation control.
+30. Invalid images are rejected before they become shop or product media.
+31. The primary mobile layout uses Material components and keeps all key controls at least 48px.
+32. A valid image is uploaded to the separate PictShare v2 CapRover service, and the resulting media URL loads through `/media/{id}`.
 
 ### 17.4 Quality checks
 
@@ -1111,7 +1189,7 @@ Analytics event names remain technical identifiers and are not shown to users.
 | --- | --- |
 | Technology and design guidance | 2.1, 2.2, 2.3, 15, 17 |
 | Bahasa Indonesia application language | 2.3.1, 5, 7, 13, 14, 15, 17 |
-| Anonymous shop discovery | 4, 5.1, 6.3, 6.4, 7.1, 13, 17 |
+| Anonymous product discovery | 4, 5.1, 6.3, 6.4, 7.1, 13, 17 |
 | Home product search and filtering | 5.1, 6.3, 6.4, 6.6, 6.7, 7.1, 8, 16, 17 |
 | Public shop catalog | 5.2, 6.2, 6.5, 6.6, 7.1, 10 |
 | WhatsApp ordering | 7.1, 10, 17.1, 17.2 |
@@ -1128,8 +1206,10 @@ Analytics event names remain technical identifiers and are not shown to users.
 
 - The seller phone is the login identifier and the WhatsApp recipient for the shop.
 - A seller's shop is created after account registration and becomes public after valid setup.
-- The public home page includes public shops even when their catalog is empty, with an empty catalog state.
-- The home page returns shop cards, with up to four matching product previews when search or category filters are active.
+- The public home page includes public available products only.
+- The home page returns product cards from all matching public shops, with one shop context on each product.
+- The homepage requests 24 products per page and uses cursor-based infinite loading with newest-first ordering.
+- Homepage product cards link to the associated public shop; cart and order actions remain on the shop page.
 - Home search matches product names and descriptions using case-insensitive substring behavior.
 - Home search, category, and location filters combine with AND logic.
 - A category filter matches a product's primary or secondary assignment.

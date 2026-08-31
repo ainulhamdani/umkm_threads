@@ -5,7 +5,7 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP definition |
-| Version | 1.5 |
+| Version | 1.6 |
 | Date | 2026-08-31 |
 | Application language | Bahasa Indonesia (`id-ID`) |
 | Documentation language | English |
@@ -16,7 +16,7 @@
 
 ## 1. Product summary
 
-Threads UMKM Marketplace is a lightweight marketplace for small Indonesian businesses. Customers discover shops, browse each shop's product catalog, build a cart for one shop, and hand the order to the seller through WhatsApp.
+Threads UMKM Marketplace is a lightweight marketplace for small Indonesian businesses. Its product-first discovery experience helps customers discover products, open the relevant shop catalog, build a cart for one shop, and hand the order to the seller through WhatsApp.
 
 All customer-facing, seller-facing, and superadmin-facing application copy must be fully in Bahasa Indonesia. This includes labels, buttons, navigation, placeholders, validation messages, empty states, notifications, accessibility text, SEO metadata, consent copy, category labels, and the WhatsApp order message.
 
@@ -28,7 +28,7 @@ Many small sellers have products to offer but do not have a simple catalog page 
 
 The product solves this by combining:
 
-- A marketplace home page with shop discovery.
+- A marketplace home page with product discovery.
 - Product search and location/category filtering.
 - A public, shareable URL for every shop.
 - A simple seller-managed catalog.
@@ -40,10 +40,10 @@ The product solves this by combining:
 
 ### Customer goals
 
-- Browse available shops without registering.
+- Browse available products without registering.
 - Search for products by name or description.
-- Filter shops by province, city/regency, district, or product category.
-- See a useful visual preview of each shop's catalog.
+- Filter products by province, city/regency, district, or product category.
+- See the shop and location associated with each product.
 - Open a shop directly from a shared URL.
 - Understand product names, photos, prices, descriptions, and availability.
 - Select multiple products from one shop.
@@ -88,20 +88,18 @@ The marketplace operator. The superadmin manages seller support, public visibili
 
 The home page must:
 
-- List all publicly visible shops.
-- Display the shop name, profile photo when available, structured location, address detail, and a link to the shop catalog.
-- Display up to four preview photos from the shop's available and publicly visible products.
-- Show fewer than four previews when the shop has fewer than four available products.
-- Show a clear empty catalog state when a public shop has no available products.
-- Use newest products first for the preview list, with a deterministic tie-breaker.
+- List publicly visible, available products from active sellers.
+- Display each product's photo, name, price, category, and optional description.
+- Display the associated shop name, structured location, and a link to the shop catalog.
+- Display two product columns on mobile, three columns on tablet, and four columns on wide desktop.
+- Load products in pages of 24 using an infinite-loading interaction and a deterministic newest-first order.
 - Provide a product search field that matches active product names and descriptions.
-- Provide cascading province, city/regency, and district filters for shop location.
+- Provide cascading province, city/regency, and district filters for product location.
 - Provide a product category filter that matches a product's primary or secondary category.
 - Combine search, location, and category conditions using AND logic.
-- Return shop cards when at least one public, available product matches the active product conditions and the shop matches the location conditions.
-- Show up to four matching product previews on filtered shop cards.
+- Open the associated shop catalog when a product card or `Lihat toko` action is selected.
 - Preserve search and filter state in URL query parameters.
-- Provide clear loading, invalid-filter, empty-marketplace, and no-results states.
+- Provide clear loading, invalid-filter, empty-marketplace, no-results, retry, and end-of-list states.
 - Work for visitors who are not logged in.
 
 All home-page copy and filter labels must be in Bahasa Indonesia. The user-facing labels are `Cari produk`, `Provinsi`, `Kabupaten/Kota`, `Kecamatan`, `Kategori produk`, and `Hapus filter`.
@@ -186,7 +184,7 @@ The seller must be able to:
 
 The fixed category options shown to users are `Pakaian dan Mode`, `Makanan`, `Minuman`, `Kecantikan dan Perawatan Diri`, `Kesehatan dan Kebugaran`, `Rumah Tangga`, `Elektronik dan Aksesori`, `Kerajinan dan Hadiah`, `Pertanian dan Produk Segar`, `Jasa`, and `Lainnya`. Sellers cannot create custom categories in the MVP.
 
-Unavailable products do not appear in home previews, do not appear in the public catalog, and cannot be added to a cart. Numeric stock counting is outside the MVP.
+Unavailable products do not appear in the homepage feed, do not appear in the public catalog, and cannot be added to a cart. Numeric stock counting is outside the MVP.
 
 ### 5.3 Superadmin experience
 
@@ -256,7 +254,7 @@ Google AdSense is the MVP monetization mechanism.
 | BR-15 | Location selections must follow the province to city/regency to district parent-child hierarchy. |
 | BR-16 | Every product has one primary category and no more than two secondary categories from the fixed taxonomy. |
 | BR-17 | A home search result must satisfy every active text, location, and category filter. |
-| BR-18 | Home product search matches active product names and descriptions and returns shop cards. |
+| BR-18 | Home product search matches active product names and descriptions and returns product cards. |
 | BR-19 | All application copy presented to users is in Bahasa Indonesia using the `id-ID` locale. |
 
 ## 7. URL and sharing rules
@@ -272,7 +270,7 @@ Google AdSense is the MVP monetization mechanism.
 
 1. The customer opens the home page or a shared shop URL.
 2. The customer searches for a product or selects location/category filters when needed.
-3. The customer opens a matching shop card or direct shop link.
+3. The customer opens a matching product card or direct shop link.
 4. The customer reviews shop details, structured location, and available products.
 5. The customer adds products and quantities to the shop cart.
 6. The customer optionally enters a name and note.
@@ -303,9 +301,9 @@ The MVP must make these measures available through application logs or analytics
 | Catalog depth | Average number of available products per visible shop. |
 | Shop views | Public shop page views, including direct shared-link visits. |
 | Product engagement | Product additions and cart quantity changes. |
-| Discovery search usage | Home searches submitted and searches producing at least one matching shop. |
+| Discovery search usage | Home searches submitted and searches producing at least one matching product. |
 | Filter usage | Home location and category filter applications. |
-| Discovery no-result rate | Searches and filter combinations that return no shop cards. |
+| Discovery no-result rate | Searches and filter combinations that return no product cards. |
 | WhatsApp order clicks | Valid cart submissions that produce a WhatsApp link. |
 | Order-link error rate | Cart submissions rejected because products or shops changed state. |
 | AdSense performance | Impressions, clicks, and revenue reported by AdSense. |
@@ -322,7 +320,7 @@ The visual and interaction system follows mobile-first Material Design 3 guidanc
 - Keep the search field and primary filters easy to reach near the top of the home page.
 - Use a sticky or bottom-sheet cart summary on mobile.
 - Use clear selected, focused, disabled, loading, and error states for every filter control.
-- Use responsive product and shop cards without forcing horizontal scrolling.
+- Use responsive product cards without forcing page-wide horizontal scrolling. The filter row may scroll horizontally on narrow screens.
 
 - Design for mobile-first use because sellers and customers will commonly use phones.
 - Keep the primary order action visible without requiring complex navigation.
@@ -356,12 +354,12 @@ The visual and interaction system follows mobile-first Material Design 3 guidanc
 The MVP is product-complete when:
 
 - An anonymous customer can browse public shops and open a shop URL directly.
-- Each shop preview shows up to four available product photos.
+- The homepage shows public available products in a paginated, infinite-loading product grid.
 - A customer can search active product names and descriptions from the home page.
-- A customer can filter the home shop list by province, city/regency, district, and product category.
+- A customer can filter the home product list by province, city/regency, district, and product category.
 - Location dropdowns are cascading and invalid parent-child combinations are rejected.
 - Search, location, and category filters combine with AND logic and preserve state in the URL.
-- Filtered shop cards show no more than four matching product previews.
+- Product cards show the correct associated shop and link to its public catalog.
 - A customer can create a one-shop cart and send its contents to the correct WhatsApp number.
 - A seller can register, log in, complete shop setup, update permitted shop fields, and manage products.
 - A seller can save province, city/regency, district, and street/address detail.
