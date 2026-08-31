@@ -12,6 +12,10 @@ const indexHtml = await Bun.file("public/index.html").text();
 const adsTxt = await Bun.file("public/ads.txt").text();
 const favicon = await Bun.file("public/favicon.svg").text();
 const server = await Bun.file("src/server/index.ts").text();
+const media = await Bun.file("src/server/media.ts").text();
+const pictshare = await Bun.file("src/server/pictshare.ts").text();
+const mediaMigration = await Bun.file("sql/002_pictshare_media.sql").text();
+const caprover = await Bun.file("CAPROVER.md").text();
 
 describe("CapRover deployment", () => {
   test("uses a pinned Bun multi-stage production image", () => {
@@ -90,5 +94,21 @@ describe("CapRover deployment", () => {
     expect(favicon).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
     expect(server).toContain('url.pathname === "/favicon.svg"');
     expect(server).toContain('"content-type": "image/svg+xml; charset=utf-8"');
+  });
+
+  test("uses the separate PictShare v2 image service", () => {
+    expect(pictshare).toContain("/api/upload");
+    expect(pictshare).toContain('form.append("file"');
+    expect(pictshare).toContain('form.append("uploadcode"');
+    expect(media).toContain("uploadToPictShare");
+    expect(media).toContain("remote_hash");
+    expect(media).toContain("remote_url");
+    expect(media).toContain("status: 302");
+    expect(media).not.toContain("Bun.write(");
+    expect(mediaMigration).toContain("remote_hash");
+    expect(mediaMigration).toContain("remote_url");
+    expect(caprover).toContain("hascheksolutions/pictshare:2");
+    expect(caprover).toContain("/usr/share/nginx/html/data");
+    expect(caprover).toContain("PICTSHARE_UPLOAD_CODE");
   });
 });

@@ -5,8 +5,8 @@ const frd = await Bun.file("FRD.md").text();
 
 describe("dokumen marketplace", () => {
   test("menggunakan versi dan stack yang disepakati", () => {
-    expect(prd).toContain("| Version | 1.4 |");
-    expect(frd).toContain("| Version | 1.4 |");
+    expect(prd).toContain("| Version | 1.5 |");
+    expect(frd).toContain("| Version | 1.5 |");
     expect(prd).toContain("Bun 1.4.x, React 19.2, and TypeScript");
     expect(frd).toContain("Bun 1.4.x, React 19.2, TypeScript");
     expect(prd).not.toMatch(/Next\.js/i);
@@ -28,6 +28,10 @@ describe("dokumen marketplace", () => {
     expect(frd).toContain("POST` | `/api/events`");
     expect(frd).toContain("`q`");
     expect(frd).toContain("AND logic");
+    expect(prd).toContain("hascheksolutions/pictshare:2");
+    expect(frd).toContain("hascheksolutions/pictshare:2");
+    expect(frd).toContain("PICTSHARE_API_URL");
+    expect(frd).toContain("remote_url");
   });
 
   test("memiliki traceability matrix dan acceptance scenarios", () => {

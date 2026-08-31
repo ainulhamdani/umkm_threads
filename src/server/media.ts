@@ -1,12 +1,12 @@
-import { mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { config } from "../shared/config";
 import { validateImageFile, validateText } from "../shared/validation";
 import { HttpError } from "./http";
 import { db } from "./db";
+import { uploadToPictShare } from "./pictshare";
 
-type MediaRow = RowDataPacket & { id: number; storage_key: string; mime_type: string; original_name: string; alt_text: string };
+type MediaRow = RowDataPacket & { id: number; storage_key: string; remote_url: string | null; mime_type: string; original_name: string; alt_text: string };
 export type MediaOwnerType = "SELLER" | "SUPERADMIN";
 type ImageDimensions = { width: number; height: number };
 
@@ -90,13 +90,6 @@ function imageDimensions(bytes: Uint8Array, mimeType: string): ImageDimensions |
   return webpDimensions(bytes);
 }
 
-function extension(mime: string): string {
-  if (mime === "image/jpeg") return "jpg";
-  if (mime === "image/png") return "png";
-  if (mime === "image/webp") return "webp";
-  throw new HttpError(400, "INVALID_IMAGE", "Format gambar tidak didukung.");
-}
-
 function imageId(value: string): number {
   const id = Number(value);
   if (!Number.isSafeInteger(id) || id < 1) throw new HttpError(400, "INVALID_MEDIA", "Media tidak valid.");
@@ -117,18 +110,17 @@ export async function storeImage(request: Request, ownerType: MediaOwnerType, ow
   const altText = String(form.get("altText") ?? "").trim();
   const altErrors = validateText(altText, "Teks alternatif", 1, 255);
   if (altErrors.length > 0) throw new HttpError(400, "INVALID_ALT_TEXT", altErrors[0] ?? "Teks alternatif tidak valid.");
-  const storageKey = `${crypto.randomUUID()}.${extension(mimeType)}`;
-  const filePath = join(config.uploadDir, storageKey);
-  await mkdir(config.uploadDir, { recursive: true });
+
+  const remote = await uploadToPictShare(file.name.slice(0, 255), mimeType, bytes);
+  const storageKey = `pictshare-${crypto.randomUUID()}`;
   try {
-    await Bun.write(filePath, bytes);
     const [result] = await db.execute<ResultSetHeader>(
-      "INSERT INTO media (storage_key, original_name, mime_type, byte_size, width, height, alt_text, owner_type, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [storageKey, file.name.slice(0, 255), mimeType, bytes.byteLength, dimensions.width, dimensions.height, altText, ownerType, ownerId],
+      "INSERT INTO media (storage_key, remote_hash, remote_url, original_name, mime_type, byte_size, width, height, alt_text, owner_type, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [storageKey, remote.hash, remote.url, file.name.slice(0, 255), mimeType, bytes.byteLength, dimensions.width, dimensions.height, altText, ownerType, ownerId],
     );
     return { id: Number(result.insertId), url: `/media/${result.insertId}`, altText };
   } catch (error) {
-    await unlink(filePath).catch((cleanupError) => console.error("Gagal membersihkan unggahan media.", cleanupError));
+    console.error("Gambar sudah tersimpan di PictShare tetapi metadata media gagal disimpan.", error);
     throw error;
   }
 }
@@ -146,9 +138,19 @@ export async function assertOwnedMedia(mediaIdValue: unknown, ownerType: MediaOw
 
 export async function serveMedia(idValue: string): Promise<Response> {
   const id = imageId(idValue);
-  const [rows] = await db.execute<MediaRow[]>("SELECT id, storage_key, mime_type, original_name, alt_text FROM media WHERE id = ? LIMIT 1", [id]);
+  const [rows] = await db.execute<MediaRow[]>("SELECT id, storage_key, remote_url, mime_type, original_name, alt_text FROM media WHERE id = ? LIMIT 1", [id]);
   const row = rows[0];
   if (!row) return new Response("Media tidak ditemukan.", { status: 404 });
+  if (row.remote_url) {
+    try {
+      const remoteUrl = new URL(row.remote_url);
+      if (remoteUrl.protocol !== "http:" && remoteUrl.protocol !== "https:") throw new Error("Protokol URL media tidak didukung.");
+      return new Response(null, { status: 302, headers: { location: remoteUrl.toString(), "cache-control": "public, max-age=31536000, immutable", "x-content-type-options": "nosniff" } });
+    } catch (error) {
+      console.error("URL media PictShare tidak valid.", { mediaId: id, error });
+      return new Response("Media tidak ditemukan.", { status: 404 });
+    }
+  }
   const file = Bun.file(join(config.uploadDir, row.storage_key));
   if (!(await file.exists())) return new Response("Media tidak ditemukan.", { status: 404 });
   return new Response(file, { headers: { "content-type": row.mime_type, "cache-control": "public, max-age=31536000, immutable", "x-content-type-options": "nosniff" } });

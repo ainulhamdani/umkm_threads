@@ -5,9 +5,10 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP implementation specification |
-| Version | 1.4 |
-| Date | 2026-08-29 |
+| Version | 1.5 |
+| Date | 2026-08-31 |
 | Application stack | Bun 1.4.x, React 19.2, TypeScript |
+| Image service | Self-hosted PictShare v2 (`hascheksolutions/pictshare:2`) |
 | Design guidance | Mobile-first Material Design 3 |
 | Application language | Bahasa Indonesia (`id-ID`) |
 | Database service | MySQL through `D:\xampp\mysql` |
@@ -75,10 +76,13 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 
 - Store uploaded files outside Git-tracked source files.
 - The application must use a media storage adapter with a stable media identifier.
-- Local development uses a configured local uploads directory.
-- Production uses a persistent object or file storage target configured by deployment.
-- The database stores media metadata and a storage key, not binary image contents.
-- Public media is served through a stable media URL and may be optimized by the configured image delivery pipeline.
+- New uploads use a separate PictShare v2 service deployed from `hascheksolutions/pictshare:2`.
+- The server sends `multipart/form-data` to `${PICTSHARE_API_URL}/api/upload` with the field `file`. If `PICTSHARE_UPLOAD_CODE` is configured, it sends the code as the PictShare v2 `uploadcode` form field.
+- `PICTSHARE_API_URL` is server-only and may use the private CapRover service hostname. `PICTSHARE_PUBLIC_URL` is the public HTTPS base URL used to construct browser-facing image URLs.
+- The database stores image metadata, a PictShare `remote_hash`, a PictShare `remote_url`, and an internal unique storage key. It never stores new image binary contents.
+- Public media remains available through the stable `/media/{id}` endpoint, which redirects remote records to PictShare and serves legacy local records from `UPLOAD_DIR`.
+- New uploads fail with a clear configuration or service error when PictShare is not available. The application must not silently fall back to local storage for new uploads.
+- The PictShare container must persist `/usr/share/nginx/html/data`. `IMAGE_CHANGE_CODE` and `MASTER_DELETE_CODE` belong only to the PictShare deployment and must never be returned to the browser.
 
 ## 3. Actors and permissions
 
@@ -387,7 +391,9 @@ Enforce a unique `(product_id, category_code)` pair and a unique `(product_id, p
 | Field | Type and rules |
 | --- | --- |
 | `id` | Internal primary key or opaque public identifier. |
-| `storage_key` | Required unique provider key or local path. |
+| `storage_key` | Required unique internal key. For legacy records it is the local path; for PictShare records it is an opaque server-generated key and is not the remote hash. |
+| `remote_hash` | Nullable PictShare hash returned by the v2 upload API. It is not unique because PictShare may deduplicate identical files. |
+| `remote_url` | Nullable validated HTTP or HTTPS PictShare public URL. New records require this field; legacy local records leave it null. |
 | `mime_type` | Required allowlisted image MIME type. |
 | `byte_size` | Required positive integer. |
 | `width` | Required positive integer after inspection. |
@@ -677,9 +683,20 @@ The API rejects a missing primary category, more than two secondary categories, 
 
 | Method | Path | Behavior |
 | --- | --- | --- |
-| `POST` | `/api/media` | Accept one validated image upload, store it through the media adapter, and return the media ID and public URL. |
+| `POST` | `/api/media` | Validate one image, upload it to PictShare v2, store its metadata and remote reference, and return the stable media ID and `/media/{id}` URL. |
 
 The media endpoint accepts `multipart/form-data`, while all metadata and mutation APIs use JSON.
+
+The upload sequence is:
+
+1. Read the multipart `file` and required `altText` field.
+2. Detect the image type from its bytes, validate JPEG/PNG/WebP format, dimensions, and the 5 MB limit.
+3. Send the file to `${PICTSHARE_API_URL}/api/upload`. Send `uploadcode` only when `PICTSHARE_UPLOAD_CODE` is configured.
+4. Require a successful PictShare JSON response with `status: "ok"`, a safe `hash`, and an HTTP or HTTPS `url`.
+5. Store the returned hash and the URL built from `PICTSHARE_PUBLIC_URL` in `media.remote_hash` and `media.remote_url`.
+6. Return the application URL `/media/{id}`. The endpoint redirects to the stored PictShare URL for new records.
+
+PictShare service failures return `503 IMAGE_SERVICE_UNAVAILABLE` or `502 IMAGE_UPLOAD_FAILED` without exposing the upload code or upstream response body. If the media database insert fails after PictShare accepts the file, the request fails and the incident is logged for orphan cleanup; the service must not delete a possibly deduplicated remote file automatically.
 
 ### 7.6 Superadmin APIs
 
@@ -773,8 +790,12 @@ The audit-log response uses a fixed page size of 25 records and returns the newe
 - Validate MIME type from file content, not only the filename.
 - Enforce a maximum upload size of 5 MB per image.
 - Require positive dimensions and reject corrupted files.
-- Generate a server-side storage key; never use a raw user filename as the storage path.
-- Use a consistent public media URL and safe image response headers.
+- Generate a server-side internal storage key; never use a raw user filename as a storage path or database key.
+- Require `PICTSHARE_API_URL` and `PICTSHARE_PUBLIC_URL` for new uploads.
+- Use the PictShare v2 `file` and optional `uploadcode` fields and validate the upstream JSON response before writing media metadata.
+- Store the PictShare hash and public URL separately from the internal key.
+- Use the stable `/media/{id}` URL with safe redirect or file response headers.
+- Keep local file serving only for legacy media rows whose `remote_url` is null.
 
 ## 9. Authentication and security
 
@@ -815,7 +836,9 @@ The audit-log response uses a fixed page size of 25 records and returns the newe
 - Escape user text when rendering HTML.
 - Do not render arbitrary HTML from product descriptions.
 - Use parameterized database queries through the data access layer.
-- Do not expose internal PIN hashes, session tokens, storage credentials, or sensitive audit metadata.
+- Do not expose internal PIN hashes, session tokens, PictShare upload or delete codes, storage credentials, or sensitive audit metadata.
+- Keep PictShare service URLs and credentials on the server. Never accept a PictShare endpoint or code from a browser request.
+- Redirect only to stored HTTP or HTTPS media URLs; reject invalid protocols and malformed remote URLs.
 
 ## 10. Cart and WhatsApp behavior
 
@@ -874,11 +897,12 @@ After a valid response, the client opens the returned WhatsApp URL. The UI must 
 ## 11. Media behavior
 
 - Profile photos and product photos use the same upload validation pipeline.
-- New media is uploaded before the related shop or product mutation is committed.
+- New media is uploaded to PictShare v2 before the related shop or product mutation is committed.
 - If a later mutation fails, the media record is marked unused for cleanup rather than silently discarded.
-- Public media URLs must not expose local absolute filesystem paths.
+- Public media URLs must not expose local absolute filesystem paths. New media uses the stable `/media/{id}` redirect to the stored PictShare URL.
+- Legacy records with a null `remote_url` continue to read from the configured `UPLOAD_DIR` until a deliberate migration is performed.
 - The UI shows upload progress, file validation errors, and a preview before save.
-- The server can generate resized variants for thumbnails and responsive public pages.
+- PictShare handles image storage and can generate resized variants for thumbnails and responsive public pages.
 
 ## 12. AdSense behavior
 
@@ -1001,6 +1025,8 @@ Analytics event names remain technical identifiers and are not shown to users.
 - Calculate line totals and cart subtotals without floating-point arithmetic.
 - Encode WhatsApp messages correctly.
 - Reject cart quantities outside 1 through 99.
+- Build stable PictShare public URLs only from validated hashes and configured public URL data.
+- Reject missing or malformed PictShare configuration and malformed upstream upload responses.
 
 ### 17.2 Integration tests
 
@@ -1023,6 +1049,9 @@ Analytics event names remain technical identifiers and are not shown to users.
 - Filtered previews contain only matching available products and no more than four items.
 - Invalid location filters return `INVALID_LOCATION_FILTER`.
 - WhatsApp-link generation uses current database prices, ignores client prices, and returns the correct seller phone.
+- Media uploads send the `file` field and configured `uploadcode` to PictShare v2 and persist `remote_hash` and `remote_url`.
+- New media does not fall back to local filesystem writes when PictShare is unavailable.
+- Stable media routes redirect PictShare records and continue serving legacy local records.
 - Superadmin visibility changes are audited.
 - Seller PIN reset revokes sessions and sets reset-required state.
 - Sellers cannot read or update AdSense settings.
@@ -1059,6 +1088,7 @@ Analytics event names remain technical identifiers and are not shown to users.
 28. A superadmin moves between activity-log pages and sees the correct records, total count, and disabled first or last navigation control.
 29. Invalid images are rejected before they become shop or product media.
 30. The primary mobile layout uses Material components and keeps all key controls at least 48px.
+31. A valid image is uploaded to the separate PictShare v2 CapRover service, and the resulting media URL loads through `/media/{id}`.
 
 ### 17.4 Quality checks
 
@@ -1067,6 +1097,8 @@ Analytics event names remain technical identifiers and are not shown to users.
 - Verify migrations apply to a clean database and can be used to start the app.
 - Verify the location seed includes its public source URL, retrieval date, version, checksum, and valid hierarchy.
 - Verify the category seed contains the fixed taxonomy in the documented order.
+- Verify PictShare v2 is deployed with persistent `/usr/share/nginx/html/data`, a public `URL`, and configured upload protection.
+- Verify the UMKM app uses the private PictShare service URL for uploads and never includes PictShare codes in client assets or API responses.
 - Verify all user-facing labels, messages, metadata, accessibility names, and WhatsApp templates are in Bahasa Indonesia.
 - Verify the application does not commit uploads, secrets, build output, or compiled artifacts.
 - Test mobile, tablet, and desktop widths and keyboard navigation on all primary flows.
@@ -1090,7 +1122,7 @@ Analytics event names remain technical identifiers and are not shown to users.
 | Superadmin moderation | 3, 5.8, 7.6, 9.4, 16, 17 |
 | AdSense monetization | 5.8, 7.6, 12, 17 |
 | IDR and Indonesian phones | 2.4, 8.1, 8.5, 10 |
-| Media upload and serving | 2.5, 7.5, 8.6, 11, 17 |
+| PictShare media service and serving | 2.5, 7.5, 8.6, 9.5, 11, 17 |
 
 ## 19. Implementation assumptions
 
@@ -1112,5 +1144,9 @@ Analytics event names remain technical identifiers and are not shown to users.
 - Technical API paths, database fields, enum codes, and analytics event names remain unchanged and are not displayed directly to users.
 - Product order is newest first because seller-defined sorting is outside the MVP.
 - A product is never physically deleted by the seller in the MVP; unavailable is the seller removal state.
+- PictShare runs as a separate CapRover app from the UMKM app using `hascheksolutions/pictshare:2`.
+- `PICTSHARE_API_URL` may use the CapRover internal hostname, while `PICTSHARE_PUBLIC_URL` is the public PictShare URL configured in its `URL` setting.
+- `PICTSHARE_UPLOAD_CODE` is sent only as the v2 `uploadcode` multipart field. `IMAGE_CHANGE_CODE` and `MASTER_DELETE_CODE` are retained only in PictShare deployment configuration.
+- Existing local media is not silently re-uploaded. It remains readable from `UPLOAD_DIR` until an explicit migration or cleanup.
 - The internal superadmin console is included in the user-facing AdSense route scope because that was selected for this MVP.
 - There is no old-slug redirect because shop slugs never change.

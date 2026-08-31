@@ -12,4 +12,10 @@ export const config = {
   },
   uploadDir: Bun.env.UPLOAD_DIR ?? "storage/uploads",
   maxImageBytes: Number(Bun.env.MAX_IMAGE_BYTES ?? "5242880"),
+  pictshare: {
+    apiUrl: Bun.env.PICTSHARE_API_URL ?? "",
+    publicUrl: Bun.env.PICTSHARE_PUBLIC_URL ?? "",
+    uploadCode: Bun.env.PICTSHARE_UPLOAD_CODE ?? "",
+    timeoutMs: Number(Bun.env.PICTSHARE_TIMEOUT_MS ?? "30000"),
+  },
 };

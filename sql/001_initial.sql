@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS location_dataset_metadata (
 CREATE TABLE IF NOT EXISTS media (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   storage_key VARCHAR(255) NOT NULL,
+  remote_hash VARCHAR(255) NULL,
+  remote_url VARCHAR(2048) NULL,
   original_name VARCHAR(255) NOT NULL,
   mime_type VARCHAR(80) NOT NULL,
   byte_size INT UNSIGNED NOT NULL,
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS media (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_media_storage_key (storage_key),
+  KEY idx_media_remote_hash (remote_hash),
   KEY idx_media_owner (owner_type, owner_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

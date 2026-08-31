@@ -153,10 +153,11 @@ try {
     }
     if (sellerId || shopId || productId) await connection.execute("DELETE FROM audit_logs WHERE (actor_type = 'SELLER' AND actor_id = ?) OR (target_type = 'SELLER' AND target_id = ?) OR (target_type = 'SHOP' AND target_id = ?) OR (target_type = 'PRODUCT' AND target_id = ?)", [sellerId || null, sellerId || null, shopId || null, productId || null]);
     for (const mediaId of uploadedMediaIds) {
-      const [rows] = await connection.execute<RowDataPacket[]>("SELECT storage_key FROM media WHERE id = ?", [mediaId]);
+      const [rows] = await connection.execute<RowDataPacket[]>("SELECT storage_key, remote_url FROM media WHERE id = ?", [mediaId]);
       await connection.execute("DELETE FROM media WHERE id = ?", [mediaId]);
       const storageKey = rows[0]?.storage_key;
-      if (storageKey) await unlink(join(config.uploadDir, storageKey)).catch((error) => console.warn("Media fixture tidak dapat dihapus.", error));
+      const remoteUrl = rows[0]?.remote_url;
+      if (storageKey && !remoteUrl) await unlink(join(config.uploadDir, storageKey)).catch((error) => console.warn("Media fixture tidak dapat dihapus.", error));
     }
   } finally {
     await connection.end();

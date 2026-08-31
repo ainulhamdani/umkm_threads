@@ -5,11 +5,12 @@
 | --- | --- |
 | Product | Threads UMKM Marketplace |
 | Document status | MVP definition |
-| Version | 1.4 |
-| Date | 2026-08-29 |
+| Version | 1.5 |
+| Date | 2026-08-31 |
 | Application language | Bahasa Indonesia (`id-ID`) |
 | Documentation language | English |
 | Application stack | Bun 1.4.x, React 19.2, and TypeScript |
+| Image service | Self-hosted PictShare v2 (`hascheksolutions/pictshare:2`) |
 | Design guidance | Mobile-first Material Design 3 |
 | Database | MySQL database `threads_shop` through `D:\xampp\mysql` |
 
@@ -31,6 +32,7 @@ The product solves this by combining:
 - Product search and location/category filtering.
 - A public, shareable URL for every shop.
 - A simple seller-managed catalog.
+- A self-hosted image service for shop and product photos.
 - A cart that creates a prefilled WhatsApp order message.
 - Advertising revenue through Google AdSense.
 
@@ -213,7 +215,16 @@ Google AdSense is the MVP monetization mechanism.
 - API responses, file responses, and redirects do not render ads.
 - The product must include the required privacy notice, consent behavior where applicable, and `ads.txt` setup before production advertising is enabled.
 
-### 5.5 Language and localization
+### 5.5 Image storage
+
+- New shop profile and product photos are validated by the application and uploaded to the separate self-hosted PictShare v2 service using the `hascheksolutions/pictshare:2` image.
+- The application stores image metadata, the PictShare hash, and the public PictShare URL in MySQL. It does not store new image binaries in the UMKM container.
+- The application keeps the stable `/media/{id}` URL so existing page and API contracts do not expose storage implementation details.
+- The PictShare deployment must use persistent storage. Its public URL is configured separately from the private CapRover service URL used for server-to-server uploads.
+- The PictShare `UPLOAD_CODE`, `IMAGE_CHANGE_CODE`, and `MASTER_DELETE_CODE` are deployment secrets for the PictShare service. They must not be exposed to customers, sellers, or client-side code.
+- Existing media created by the previous local storage implementation may remain readable through the legacy upload volume until it is deliberately migrated.
+
+### 5.6 Language and localization
 
 - The application locale is `id-ID`.
 - The root document language is `id`.
@@ -330,7 +341,8 @@ The visual and interaction system follows mobile-first Material Design 3 guidanc
 | PIN-only authentication allows account takeover if a PIN is shared. | Hash PINs, rate-limit login attempts, use secure sessions, and provide superadmin PIN reset. |
 | A seller changes a price after a customer builds a cart. | Revalidate product state and current prices when generating the WhatsApp link. |
 | A seller forgets to update availability. | Provide a prominent available/unavailable control and show current public state in the dashboard. |
-| Large images slow down mobile pages. | Validate image size, resize or optimize uploads, and use responsive image delivery. |
+| Large images slow down mobile pages. | Validate image size, let PictShare optimize delivery, and use responsive image rendering. |
+| PictShare is unavailable or loses its storage volume. | Fail image uploads clearly, monitor the service, configure persistent storage in CapRover, and back up the PictShare data volume. |
 | Administrative location data becomes outdated. | Pin a public dataset snapshot, record its version, and refresh it deliberately through a reviewed seed update. |
 | Category labels become inconsistent across sellers. | Use a fixed seeded category taxonomy and reject custom category values. |
 | Search or filters produce confusing results. | Use explicit AND logic, show active filter state, and provide a clear no-results message. |
@@ -359,6 +371,8 @@ The MVP is product-complete when:
 - Indonesian labels are used for the fixed category taxonomy while technical category codes remain unchanged.
 - The shop URL is unique and cannot be edited after setup.
 - Invalid phone numbers, duplicate phones, invalid PINs, invalid slugs, invalid prices, and invalid images are rejected with clear messages.
+- New profile and product image uploads are sent to PictShare v2, and the app stores their remote hash and URL without writing new image files to the UMKM container.
+- The stable `/media/{id}` endpoint redirects to the configured PictShare public URL, while legacy local media remains readable during migration.
 - A seller cannot access another seller's shop or products.
 - The superadmin can hide and restore shops and products and reset seller PINs.
 - AdSense settings can be changed only by the superadmin and can render on every application page.
