@@ -61,7 +61,7 @@ PICTSHARE_UPLOAD_CODE=<same value as PictShare UPLOAD_CODE>
 PICTSHARE_TIMEOUT_MS=30000
 ```
 
-The private URL is used only for the server-to-server `POST /api/upload` request. The public URL is used to build the browser-facing image URL. The v2 API receives the upload code in the `uploadcode` form field. Never put `PICTSHARE_UPLOAD_CODE`, `IMAGE_CHANGE_CODE`, or `MASTER_DELETE_CODE` in client variables, committed files, logs, or HTML.
+The private URL is used only for the server-to-server `POST /api/upload.php` request. The public URL is used to build the browser-facing image URL. The v2 API receives the upload code in the `uploadcode` form field. Never put `PICTSHARE_UPLOAD_CODE`, `IMAGE_CHANGE_CODE`, or `MASTER_DELETE_CODE` in client variables, committed files, logs, or HTML.
 
 PictShare is file-based and does not use the `threads_shop` database. Back up `/usr/share/nginx/html/data` separately from MySQL. Do not remove the PictShare volume during an app update.
 

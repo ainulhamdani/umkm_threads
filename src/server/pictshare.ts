@@ -62,7 +62,7 @@ export function buildPictShareImageUrl(publicUrl: string, hash: string): string 
 }
 
 export async function uploadToPictShare(fileName: string, mimeType: string, bytes: Uint8Array<ArrayBuffer>): Promise<PictShareUpload> {
-  const apiEndpoint = `${baseUrl(config.pictshare.apiUrl, "PICTSHARE_API_URL")}/api/upload`;
+  const apiEndpoint = `${baseUrl(config.pictshare.apiUrl, "PICTSHARE_API_URL")}/api/upload.php`;
   const publicUrl = baseUrl(config.pictshare.publicUrl, "PICTSHARE_PUBLIC_URL");
   const form = new FormData();
   form.append("file", new File([bytes], fileName || "image", { type: mimeType }));

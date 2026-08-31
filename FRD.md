@@ -77,7 +77,7 @@ The application is a catalog and WhatsApp lead handoff. It does not persist mark
 - Store uploaded files outside Git-tracked source files.
 - The application must use a media storage adapter with a stable media identifier.
 - New uploads use a separate PictShare v2 service deployed from `hascheksolutions/pictshare:2`.
-- The server sends `multipart/form-data` to `${PICTSHARE_API_URL}/api/upload` with the field `file`. If `PICTSHARE_UPLOAD_CODE` is configured, it sends the code as the PictShare v2 `uploadcode` form field.
+- The server sends `multipart/form-data` to `${PICTSHARE_API_URL}/api/upload.php` with the field `file`. If `PICTSHARE_UPLOAD_CODE` is configured, it sends the code as the PictShare v2 `uploadcode` form field.
 - `PICTSHARE_API_URL` is server-only and may use the private CapRover service hostname. `PICTSHARE_PUBLIC_URL` is the public HTTPS base URL used to construct browser-facing image URLs.
 - The database stores image metadata, a PictShare `remote_hash`, a PictShare `remote_url`, and an internal unique storage key. It never stores new image binary contents.
 - Public media remains available through the stable `/media/{id}` endpoint, which redirects remote records to PictShare and serves legacy local records from `UPLOAD_DIR`.
@@ -691,7 +691,7 @@ The upload sequence is:
 
 1. Read the multipart `file` and required `altText` field.
 2. Detect the image type from its bytes, validate JPEG/PNG/WebP format, dimensions, and the 5 MB limit.
-3. Send the file to `${PICTSHARE_API_URL}/api/upload`. Send `uploadcode` only when `PICTSHARE_UPLOAD_CODE` is configured.
+3. Send the file to `${PICTSHARE_API_URL}/api/upload.php`. Send `uploadcode` only when `PICTSHARE_UPLOAD_CODE` is configured.
 4. Require a successful PictShare JSON response with `status: "ok"`, a safe `hash`, and an HTTP or HTTPS `url`.
 5. Store the returned hash and the URL built from `PICTSHARE_PUBLIC_URL` in `media.remote_hash` and `media.remote_url`.
 6. Return the application URL `/media/{id}`. The endpoint redirects to the stored PictShare URL for new records.

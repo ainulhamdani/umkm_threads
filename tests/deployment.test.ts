@@ -97,7 +97,7 @@ describe("CapRover deployment", () => {
   });
 
   test("uses the separate PictShare v2 image service", () => {
-    expect(pictshare).toContain("/api/upload");
+    expect(pictshare).toContain("/api/upload.php");
     expect(pictshare).toContain('form.append("file"');
     expect(pictshare).toContain('form.append("uploadcode"');
     expect(media).toContain("uploadToPictShare");

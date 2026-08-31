@@ -26,7 +26,7 @@ describe("integrasi PictShare", () => {
         timeoutMs: 30_000,
       });
       const result = await uploadToPictShare("foto.png", "image/png", Uint8Array.from([1, 2, 3]));
-      expect(requestUrl).toBe("http://pictshare/api/upload");
+      expect(requestUrl).toBe("http://pictshare/api/upload.php");
       if (!captured.body) throw new Error("FormData PictShare tidak ditemukan.");
       expect(captured.body.get("uploadcode")).toBe("test-upload-code");
       const uploadedFile = captured.body.get("file");
